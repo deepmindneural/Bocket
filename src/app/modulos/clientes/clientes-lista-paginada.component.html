@@ -1,0 +1,255 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>
+      <ion-icon name="people" class="title-icon"></ion-icon>
+      Gestión de Clientes
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="nuevoCliente()" class="add-button">
+        <ion-icon slot="start" name="add-circle"></ion-icon>
+        <span class="ion-hide-sm-down">Nuevo Cliente</span>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  
+  <!-- Barra de búsqueda y filtros -->
+  <ion-toolbar class="search-toolbar">
+    <ion-searchbar 
+      [(ngModel)]="terminoBusqueda"
+      (ionInput)="buscarClientes($event)"
+      placeholder="Buscar por nombre, email o teléfono..."
+      [showClearButton]="true"
+      class="modern-searchbar">
+    </ion-searchbar>
+    
+    <ion-buttons slot="end">
+      <ion-button (click)="mostrarFiltros = !mostrarFiltros" color="medium">
+        <ion-icon name="filter" slot="icon-only"></ion-icon>
+        <ion-badge *ngIf="tienenFiltrosAplicados()" color="danger" class="filter-badge">!</ion-badge>
+      </ion-button>
+      <ion-button (click)="refrescar()" color="medium">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  
+  <!-- Filtros avanzados -->
+  <ion-toolbar *ngIf="mostrarFiltros" class="filters-toolbar">
+    <ion-grid>
+      <ion-row>
+        <ion-col size="6" size-md="3">
+          <ion-select [(ngModel)]="filtrosAplicados.tipo" placeholder="Tipo de cliente" interface="popover">
+            <ion-select-option value="todos">Todos</ion-select-option>
+            <ion-select-option value="vip">VIP</ion-select-option>
+            <ion-select-option value="frecuente">Frecuente</ion-select-option>
+            <ion-select-option value="empresa">Empresa</ion-select-option>
+          </ion-select>
+        </ion-col>
+        <ion-col size="6" size-md="3">
+          <ion-select [(ngModel)]="filtrosAplicados.estado" placeholder="Estado" interface="popover">
+            <ion-select-option value="todos">Todos</ion-select-option>
+            <ion-select-option value="activo">Activo</ion-select-option>
+            <ion-select-option value="inactivo">Inactivo</ion-select-option>
+          </ion-select>
+        </ion-col>
+        <ion-col size="12" size-md="6" class="filter-actions">
+          <ion-button size="small" fill="clear" (click)="aplicarFiltros()">
+            <ion-icon name="checkmark" slot="start"></ion-icon>
+            Aplicar
+          </ion-button>
+          <ion-button size="small" fill="clear" color="medium" (click)="limpiarFiltros()">
+            <ion-icon name="close" slot="start"></ion-icon>
+            Limpiar
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="clients-content">
+  <!-- Pull to refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Arrastra para actualizar"
+      refreshingSpinner="circles"
+      refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Estado de carga -->
+  <div class="loading-container" *ngIf="paginationState?.isLoading && clientes.length === 0">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Cargando clientes...</p>
+  </div>
+
+  <!-- Lista de clientes con diseño mejorado -->
+  <div class="clients-container" *ngIf="!paginationState?.isLoading || clientes.length > 0">
+    
+    <!-- Información de paginación -->
+    <div class="pagination-info">
+      <span class="info-text">{{ obtenerResumenPaginacion() }}</span>
+      <ion-select 
+        [value]="paginationState?.pageSize" 
+        (ionChange)="cambiarTamanoPagina($event)"
+        interface="popover"
+        class="page-size-select">
+        <ion-select-option *ngFor="let size of opcionesTamanoPagina" [value]="size">
+          {{ size }} por página
+        </ion-select-option>
+      </ion-select>
+    </div>
+
+    <!-- Grid de clientes -->
+    <div class="clients-grid">
+      <ion-card *ngFor="let cliente of clientes" class="client-card">
+        <ion-card-content>
+          <div class="client-header">
+            <div class="client-avatar">
+              <ion-avatar>
+                <img [src]="cliente.image || 'assets/avatar-default.png'" [alt]="cliente.name">
+              </ion-avatar>
+              <span class="status-indicator" [class.active]="cliente.isWAContact"></span>
+            </div>
+            
+            <div class="client-info">
+              <h3 class="client-name">{{ cliente.name || 'Sin nombre' }}</h3>
+              <p class="client-phone">
+                <ion-icon name="logo-whatsapp" color="success"></ion-icon>
+                {{ cliente.id }}
+              </p>
+              <p class="client-email" *ngIf="cliente.email">
+                <ion-icon name="mail-outline"></ion-icon>
+                {{ cliente.email }}
+              </p>
+            </div>
+            
+            <div class="client-actions">
+              <ion-button fill="clear" size="small" (click)="enviarWhatsApp(cliente)">
+                <ion-icon name="logo-whatsapp" slot="icon-only" color="success"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" size="small" (click)="enviarEmail(cliente)" [disabled]="!cliente.email">
+                <ion-icon name="mail" slot="icon-only"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" size="small" [routerLink]="['/clientes', cliente.id, 'editar']">
+                <ion-icon name="create" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+          
+          <!-- Etiquetas -->
+          <div class="client-tags" *ngIf="cliente.labels">
+            <ion-chip *ngFor="let etiqueta of obtenerEtiquetas(cliente.labels)" 
+                      [color]="obtenerColorEtiqueta(etiqueta)" 
+                      size="small">
+              <ion-label>{{ etiqueta }}</ion-label>
+            </ion-chip>
+          </div>
+          
+          <!-- Estadísticas -->
+          <div class="client-stats">
+            <div class="stat-item">
+              <ion-icon name="chatbubbles" color="primary"></ion-icon>
+              <span class="stat-value">{{ calcularTotalInteracciones(cliente) }}</span>
+              <span class="stat-label">Interacciones</span>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="calendar" color="secondary"></ion-icon>
+              <span class="stat-value">{{ formatearFecha(cliente.creation) }}</span>
+              <span class="stat-label">Registro</span>
+            </div>
+            <div class="stat-item">
+              <ion-icon name="briefcase" color="tertiary" *ngIf="cliente.isEnterprise"></ion-icon>
+              <ion-icon name="person" color="tertiary" *ngIf="!cliente.isEnterprise"></ion-icon>
+              <span class="stat-value">{{ cliente.isEnterprise ? 'Empresa' : 'Personal' }}</span>
+              <span class="stat-label">Tipo</span>
+            </div>
+          </div>
+          
+          <!-- Menú de opciones -->
+          <ion-item-options>
+            <ion-button fill="clear" size="small" (click)="verDetalleCliente(cliente)">
+              <ion-icon name="eye" slot="start"></ion-icon>
+              Ver más
+            </ion-button>
+          </ion-item-options>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div class="no-results" *ngIf="clientes.length === 0 && !paginationState?.isLoading">
+      <ion-icon name="people-outline" class="no-results-icon"></ion-icon>
+      <h3>No se encontraron clientes</h3>
+      <p>{{ terminoBusqueda ? 'Intenta con otros términos de búsqueda' : 'Agrega tu primer cliente' }}</p>
+      <ion-button (click)="nuevoCliente()" color="primary">
+        <ion-icon name="add" slot="start"></ion-icon>
+        Agregar Cliente
+      </ion-button>
+    </div>
+
+    <!-- Controles de paginación mejorados -->
+    <div class="pagination-controls" *ngIf="paginationState?.totalPages > 1">
+      <ion-button 
+        fill="clear" 
+        [disabled]="!paginationState.hasPrevious || paginationState.isLoading"
+        (click)="paginaAnterior()">
+        <ion-icon name="chevron-back" slot="icon-only"></ion-icon>
+      </ion-button>
+      
+      <!-- Páginas numeradas -->
+      <div class="page-numbers">
+        <ion-button 
+          *ngIf="paginationState.currentPage > 3"
+          fill="clear"
+          size="small"
+          (click)="irAPagina(1)">
+          1
+        </ion-button>
+        
+        <span *ngIf="paginationState.currentPage > 4" class="ellipsis">...</span>
+        
+        <ion-button 
+          *ngFor="let pagina of generarArrayPaginas()"
+          [fill]="pagina === paginationState.currentPage ? 'solid' : 'clear'"
+          [color]="pagina === paginationState.currentPage ? 'primary' : 'medium'"
+          size="small"
+          (click)="irAPagina(pagina)"
+          [disabled]="paginationState.isLoading">
+          {{ pagina }}
+        </ion-button>
+        
+        <span *ngIf="paginationState.currentPage < paginationState.totalPages - 3" class="ellipsis">...</span>
+        
+        <ion-button 
+          *ngIf="paginationState.currentPage < paginationState.totalPages - 2"
+          fill="clear"
+          size="small"
+          (click)="irAPagina(paginationState.totalPages)">
+          {{ paginationState.totalPages }}
+        </ion-button>
+      </div>
+      
+      <ion-button 
+        fill="clear" 
+        [disabled]="!paginationState.hasNext || paginationState.isLoading"
+        (click)="siguientePagina()">
+        <ion-icon name="chevron-forward" slot="icon-only"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- Indicador de carga para paginación -->
+    <div class="loading-more" *ngIf="paginationState?.isLoading && clientes.length > 0">
+      <ion-spinner name="dots" color="primary"></ion-spinner>
+      <span>Cargando más clientes...</span>
+    </div>
+  </div>
+</ion-content>
+
+<!-- FAB para nuevo cliente -->
+<ion-fab vertical="bottom" horizontal="end" slot="fixed">
+  <ion-fab-button (click)="nuevoCliente()" color="primary">
+    <ion-icon name="add"></ion-icon>
+  </ion-fab-button>
+</ion-fab>

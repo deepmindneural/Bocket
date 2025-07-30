@@ -1,0 +1,120 @@
+<div class="reservas-page bocket-animate-in">
+  <!-- Header de la página -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1>Reservas</h1>
+        <p>Administra las reservas de tu restaurante</p>
+      </div>
+      <div class="header-actions">
+        <ion-button color="primary" (click)="nuevaReserva()">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Nueva Reserva
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="filtros-section bocket-card-premium">
+    <div class="filtros-content">
+      <div class="busqueda-container">
+        <ion-searchbar 
+          placeholder="Buscar por contacto o detalles..."
+          [(ngModel)]="terminoBusqueda"
+          (ionInput)="buscarReservas($event)"
+          class="searchbar-professional">
+        </ion-searchbar>
+      </div>
+      
+      <div class="filtros-avanzados">
+        <ion-segment [(ngModel)]="filtroEstado" (ionChange)="filtrarPorEstado($event)">
+          <ion-segment-button value="todas">
+            <ion-label>Todas</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="pending">
+            <ion-label>Pendientes</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="accepted">
+            <ion-label>Aceptadas</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="rejected">
+            <ion-label>Rechazadas</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de reservas -->
+  <div class="reservas-grid">
+    <div class="reserva-card bocket-card-premium" 
+         *ngFor="let reserva of reservasFiltradas" 
+         (click)="verDetalleReserva(reserva)">
+      
+      <div class="reserva-header">
+        <div class="reserva-info">
+          <h3>Reserva {{reserva.peopleBooking}} personas</h3>
+          <p>{{reserva.contactNameBooking}} - Tel: {{reserva.contact}}</p>
+        </div>
+        <div class="reserva-estado">
+          <div class="bocket-chip" [ngClass]="'status-' + reserva.statusBooking">
+            {{reserva.statusBooking | titlecase}}
+          </div>
+        </div>
+      </div>
+      
+      <div class="reserva-detalles">
+        <div class="detalle-item">
+          <ion-icon name="calendar"></ion-icon>
+          <span>{{reserva.dateBooking | date:'dd/MM/yyyy'}}</span>
+        </div>
+        <div class="detalle-item">
+          <ion-icon name="time"></ion-icon>
+          <span>{{reserva.dateBooking | date:'HH:mm'}} - {{reserva.finalPeopleBooking}} personas</span>
+        </div>
+        <div class="detalle-item" *ngIf="reserva.reconfirmStatus">
+          <ion-icon name="person"></ion-icon>
+          <span>Reconfirmación: {{reserva.reconfirmStatus}}</span>
+        </div>
+        <div class="detalle-item" *ngIf="reserva.reconfirmDate">
+          <ion-icon name="cash"></ion-icon>
+          <span>Reconfirmado: {{reserva.reconfirmDate | date:'dd/MM/yyyy'}}</span>
+        </div>
+        <div class="detalle-item" *ngIf="reserva.detailsBooking">
+          <ion-icon name="document-text"></ion-icon>
+          <span>{{reserva.detailsBooking}}</span>
+        </div>
+      </div>
+      
+      <div class="reserva-acciones">
+        <ion-button fill="clear" size="small" (click)="editarReserva(reserva, $event)">
+          <ion-icon name="create" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" size="small" color="success" 
+                   (click)="confirmarReserva(reserva, $event)"
+                   *ngIf="reserva.statusBooking === 'pending'">
+          <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" size="small" color="danger" 
+                   (click)="cancelarReserva(reserva, $event)"
+                   *ngIf="reserva.statusBooking !== 'rejected'">
+          <ion-icon name="close" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado vacío -->
+  <div class="estado-vacio" *ngIf="reservasFiltradas.length === 0">
+    <div class="vacio-icon">
+      <ion-icon name="calendar-outline"></ion-icon>
+    </div>
+    <h3>No se encontraron reservas</h3>
+    <p>{{terminoBusqueda ? 'Intenta con otros términos de búsqueda' : 'Agrega tu primera reserva para comenzar'}}</p>
+    <ion-button color="primary" (click)="nuevaReserva()">
+      <ion-icon name="add" slot="start"></ion-icon>
+      Agregar Reserva
+    </ion-button>
+  </div>
+</div>

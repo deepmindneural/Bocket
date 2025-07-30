@@ -1,0 +1,164 @@
+<div class="reserva-nueva-container">
+  <div class="header-section">
+    <div class="header-content">
+      <button class="back-btn" (click)="cancelar()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <h1>Nueva Reserva</h1>
+    </div>
+  </div>
+
+  <form [formGroup]="reservaForm" (ngSubmit)="guardarReserva()" class="reserva-form">
+    
+    <!-- Información del Contacto WhatsApp -->
+    <div class="form-section">
+      <h2>Información del Contacto</h2>
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Contacto WhatsApp *</ion-label>
+          <ion-input 
+            formControlName="contact"
+            placeholder="573001234567">
+          </ion-input>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="reservaForm.get('contact')?.invalid && reservaForm.get('contact')?.touched">
+          El contacto de WhatsApp es requerido
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Nombre para la Reserva *</ion-label>
+          <ion-input 
+            formControlName="contactNameBooking"
+            placeholder="Nombre del cliente">
+          </ion-input>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="reservaForm.get('contactNameBooking')?.invalid && reservaForm.get('contactNameBooking')?.touched">
+          El nombre para la reserva es requerido
+        </div>
+      </div>
+    </div>
+
+    <!-- Información de la Reserva -->
+    <div class="form-section">
+      <h2>Detalles de la Reserva</h2>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <ion-item>
+            <ion-label position="stacked">Número de Personas (texto) *</ion-label>
+            <ion-input 
+              formControlName="peopleBooking"
+              placeholder="4 personas">
+            </ion-input>
+          </ion-item>
+        </div>
+
+        <div class="form-group">
+          <ion-item>
+            <ion-label position="stacked">Número Final de Personas *</ion-label>
+            <ion-input 
+              type="number" 
+              formControlName="finalPeopleBooking"
+              placeholder="4">
+            </ion-input>
+          </ion-item>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Fecha de la Reserva *</ion-label>
+          <ion-datetime 
+            formControlName="dateBooking"
+            presentation="date-time"
+            [min]="getMinDate()"
+            display-format="DD/MM/YYYY HH:mm">
+          </ion-datetime>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="reservaForm.get('dateBooking')?.invalid && reservaForm.get('dateBooking')?.touched">
+          La fecha de reserva es requerida
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Estado de la Reserva *</ion-label>
+          <ion-select formControlName="statusBooking">
+            <ion-select-option *ngFor="let estado of estadosReserva" [value]="estado.value">
+              {{estado.label}}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Detalles Adicionales -->
+    <div class="form-section">
+      <h2>Detalles Adicionales</h2>
+      
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Detalles de la Reserva</ion-label>
+          <ion-textarea 
+            formControlName="detailsBooking"
+            placeholder="Observaciones, requerimientos especiales, etc."
+            rows="3">
+          </ion-textarea>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Reconfirmación -->
+    <div class="form-section">
+      <h2>Reconfirmación (Opcional)</h2>
+      
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Fecha de Reconfirmación</ion-label>
+          <ion-datetime 
+            formControlName="reconfirmDate"
+            presentation="date-time"
+            display-format="DD/MM/YYYY HH:mm">
+          </ion-datetime>
+        </ion-item>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Estado de Reconfirmación</ion-label>
+          <ion-select formControlName="reconfirmStatus">
+            <ion-select-option *ngFor="let estado of estadosReconfirmacion" [value]="estado.value">
+              {{estado.label}}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="form-actions">
+      <ion-button 
+        expand="block" 
+        type="submit"
+        [disabled]="reservaForm.invalid"
+        class="primary-btn">
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        Crear Reserva
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        fill="outline" 
+        (click)="cancelar()"
+        class="secondary-btn">
+        <ion-icon name="close" slot="start"></ion-icon>
+        Cancelar
+      </ion-button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,496 @@
+// Importar estilos adicionales para finalUser
+@use './formulario-cliente-styles.scss';
+
+.formulario-container {
+  max-width: 1200px; // Aumentado para las nuevas secciones
+  margin: 0 auto;
+  padding: var(--bocket-space-6);
+  background: var(--bocket-gray-50);
+  min-height: 100vh;
+}
+
+// Header del formulario
+.formulario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--bocket-space-6);
+  padding: var(--bocket-space-5);
+  background: white;
+  border-radius: var(--bocket-radius-lg);
+  box-shadow: var(--bocket-shadow-sm);
+  border: 1px solid var(--bocket-gray-200);
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--bocket-space-4);
+    flex: 1;
+
+    .btn-back {
+      width: 44px;
+      height: 44px;
+      border: 2px solid var(--bocket-gray-300);
+      background: white;
+      border-radius: var(--bocket-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--bocket-primary-400);
+        background: var(--bocket-primary-50);
+      }
+
+      ion-icon {
+        font-size: 20px;
+        color: var(--bocket-gray-600);
+      }
+    }
+
+    .header-info {
+      .form-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--bocket-gray-900);
+        display: flex;
+        align-items: center;
+        gap: var(--bocket-space-2);
+
+        ion-icon {
+          font-size: 28px;
+          color: var(--bocket-primary-600);
+        }
+      }
+
+      .form-subtitle {
+        margin: var(--bocket-space-1) 0 0 0;
+        color: var(--bocket-gray-600);
+        font-size: 14px;
+      }
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: var(--bocket-space-3);
+    align-items: center;
+  }
+}
+
+// Estados de carga y error
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--bocket-space-8);
+  background: white;
+  border-radius: var(--bocket-radius-lg);
+  box-shadow: var(--bocket-shadow-sm);
+
+  .loading-spinner {
+    text-align: center;
+
+    ion-icon {
+      font-size: 48px;
+      color: var(--bocket-primary-500);
+      margin-bottom: var(--bocket-space-3);
+
+      &.spin {
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    p {
+      color: var(--bocket-gray-600);
+      margin: 0;
+    }
+  }
+}
+
+.error-container {
+  text-align: center;
+  padding: var(--bocket-space-6);
+  background: var(--bocket-error-50);
+  border-radius: var(--bocket-radius-lg);
+  border: 1px solid var(--bocket-error-200);
+
+  ion-icon {
+    font-size: 48px;
+    color: var(--bocket-error-500);
+    margin-bottom: var(--bocket-space-3);
+  }
+
+  p {
+    color: var(--bocket-error-700);
+    margin: 0;
+    font-weight: 500;
+  }
+}
+
+// Formulario principal
+.cliente-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bocket-space-6);
+  padding-bottom: 120px; // Espacio para botones fijos
+}
+
+// Secciones del formulario
+.form-section {
+  background: white;
+  border-radius: var(--bocket-radius-lg);
+  padding: var(--bocket-space-6);
+  box-shadow: var(--bocket-shadow-sm);
+  border: 1px solid var(--bocket-gray-200);
+
+  .section-header {
+    margin-bottom: var(--bocket-space-5);
+    padding-bottom: var(--bocket-space-4);
+    border-bottom: 2px solid var(--bocket-gray-100);
+
+    .section-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--bocket-gray-900);
+      display: flex;
+      align-items: center;
+      gap: var(--bocket-space-2);
+
+      ion-icon {
+        font-size: 20px;
+        color: var(--bocket-primary-600);
+      }
+    }
+
+    .section-subtitle {
+      display: block;
+      margin-top: var(--bocket-space-1);
+      font-size: 13px;
+      color: var(--bocket-gray-500);
+    }
+  }
+}
+
+// Grid del formulario
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--bocket-space-4);
+
+  .span-2 {
+    grid-column: span 2;
+  }
+}
+
+// Grupos de formulario
+.form-group {
+  display: flex;
+  flex-direction: column;
+
+  .form-label {
+    font-weight: 500;
+    color: var(--bocket-gray-700);
+    margin-bottom: var(--bocket-space-2);
+    font-size: 14px;
+
+    &.required::after {
+      content: ' *';
+      color: var(--bocket-error-500);
+      font-weight: 600;
+    }
+  }
+
+  .form-input, .form-textarea {
+    padding: var(--bocket-space-3);
+    border: 2px solid var(--bocket-gray-300);
+    border-radius: var(--bocket-radius);
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: white;
+
+    &:focus {
+      outline: none;
+      border-color: var(--bocket-primary-500);
+      box-shadow: 0 0 0 3px rgba(107, 115, 255, 0.1);
+    }
+
+    &.error {
+      border-color: var(--bocket-error-500);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+
+    &::placeholder {
+      color: var(--bocket-gray-500);
+    }
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+  }
+
+  .form-error {
+    margin-top: var(--bocket-space-1);
+    color: var(--bocket-error-600);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .form-help {
+    margin-top: var(--bocket-space-1);
+    color: var(--bocket-primary-600);
+    font-size: 12px;
+    font-weight: 500;
+  }
+}
+
+// Switches de configuración
+.form-switches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bocket-space-4);
+
+  .switch-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--bocket-space-3);
+    background: var(--bocket-gray-50);
+    border-radius: var(--bocket-radius);
+    border: 1px solid var(--bocket-gray-200);
+
+    .switch-info {
+      flex: 1;
+
+      .switch-label {
+        font-weight: 500;
+        color: var(--bocket-gray-800);
+        margin-bottom: var(--bocket-space-1);
+        display: block;
+      }
+
+      .switch-description {
+        font-size: 13px;
+        color: var(--bocket-gray-600);
+        line-height: 1.4;
+      }
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+      flex-shrink: 0;
+
+      input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+
+        &:checked + .slider {
+          background-color: var(--bocket-primary-500);
+
+          &:before {
+            transform: translateX(24px);
+          }
+        }
+
+        &:focus + .slider {
+          box-shadow: 0 0 0 3px rgba(107, 115, 255, 0.2);
+        }
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bocket-gray-300);
+        transition: 0.3s;
+        border-radius: 28px;
+
+        &:before {
+          position: absolute;
+          content: "";
+          height: 20px;
+          width: 20px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: 0.3s;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+  }
+}
+
+// Botones de acción fijos
+.form-actions-sticky {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid var(--bocket-gray-200);
+  padding: var(--bocket-space-4);
+  z-index: 1000;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+
+  .actions-container {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    gap: var(--bocket-space-3);
+    justify-content: flex-end;
+
+    .btn-secondary-large, .btn-primary-large {
+      padding: var(--bocket-space-3) var(--bocket-space-6);
+      border-radius: var(--bocket-radius);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: var(--bocket-space-2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid;
+
+      ion-icon {
+        font-size: 16px;
+
+        &.spin {
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btn-secondary-large {
+      background: white;
+      border-color: var(--bocket-gray-300);
+      color: var(--bocket-gray-700);
+
+      &:hover:not(:disabled) {
+        background: var(--bocket-gray-50);
+        border-color: var(--bocket-gray-400);
+      }
+    }
+
+    .btn-primary-large {
+      background: var(--bocket-primary-500);
+      border-color: var(--bocket-primary-500);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--bocket-primary-600);
+        border-color: var(--bocket-primary-600);
+        transform: translateY(-1px);
+        box-shadow: var(--bocket-shadow-lg);
+      }
+    }
+  }
+}
+
+// Animaciones
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .formulario-container {
+    padding: var(--bocket-space-4);
+  }
+
+  .formulario-header {
+    flex-direction: column;
+    gap: var(--bocket-space-4);
+
+    .header-left {
+      width: 100%;
+    }
+
+    .header-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+
+    .span-2 {
+      grid-column: span 1;
+    }
+  }
+
+  .form-section {
+    padding: var(--bocket-space-4);
+  }
+
+  .switch-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--bocket-space-3);
+
+    .switch {
+      align-self: flex-end;
+    }
+  }
+
+  .actions-container {
+    flex-direction: column;
+
+    .btn-secondary-large, .btn-primary-large {
+      justify-content: center;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .formulario-header {
+    .header-left {
+      .btn-back {
+        width: 40px;
+        height: 40px;
+
+        ion-icon {
+          font-size: 18px;
+        }
+      }
+
+      .form-title {
+        font-size: 20px;
+
+        ion-icon {
+          font-size: 24px;
+        }
+      }
+    }
+  }
+
+  .form-section {
+    padding: var(--bocket-space-3);
+
+    .section-header {
+      margin-bottom: var(--bocket-space-4);
+      padding-bottom: var(--bocket-space-3);
+    }
+  }
+}

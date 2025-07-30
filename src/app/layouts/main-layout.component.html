@@ -1,0 +1,191 @@
+<div class="bocket-layout">
+  <!-- Overlay móvil para cerrar menú -->
+  <div class="mobile-overlay" 
+       *ngIf="isMobile && isMenuOpen" 
+       (click)="toggleSidebar()"></div>
+       
+  <!-- Sidebar profesional -->
+  <aside class="bocket-sidebar" 
+         [class.collapsed]="sidebarCollapsed" 
+         [class.mobile-open]="isMobile && isMenuOpen"
+         [class.mobile-closed]="isMobile && !isMenuOpen">
+    <div class="sidebar-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <img [src]="restauranteActual?.logo || 'assets/logo.png'" 
+               [alt]="(restauranteActual?.nombre || 'Mi Restaurante') + ' Logo'" 
+               width="32" 
+               height="32"
+               (error)="onLogoError($event)">
+        </div>
+        <div class="logo-text" *ngIf="!sidebarCollapsed">
+          <h1>{{restauranteActual?.nombre || 'Mi Restaurante'}}</h1>
+          <span>{{restauranteActual?.descripcion || 'Sistema de Gestión'}}</span>
+        </div>
+      </div>
+      <button class="collapse-btn" (click)="toggleSidebar()">
+        <ion-icon [name]="sidebarCollapsed ? 'chevron-forward' : 'chevron-back'"></ion-icon>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <h3 *ngIf="!sidebarCollapsed">Panel Principal</h3>
+        <ul class="nav-list">
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/dashboard" class="nav-link">
+              <ion-icon name="analytics"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Dashboard</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-section">
+        <h3 *ngIf="!sidebarCollapsed">Gestión</h3>
+        <ul class="nav-list">
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/clientes" class="nav-link">
+              <ion-icon name="people"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Clientes</span>
+              <div class="nav-badge" *ngIf="!sidebarCollapsed">{{clientesCount}}</div>
+            </a>
+          </li>
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/reservas" class="nav-link">
+              <ion-icon name="calendar"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Reservas</span>
+              <div class="nav-badge pending" *ngIf="!sidebarCollapsed">{{reservasPendientes}}</div>
+            </a>
+          </li>
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/pedidos" class="nav-link">
+              <ion-icon name="receipt"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Pedidos</span>
+              <div class="nav-badge active" *ngIf="!sidebarCollapsed">{{pedidosActivos}}</div>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-section">
+        <h3 *ngIf="!sidebarCollapsed">Productos</h3>
+        <ul class="nav-list">
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/productos" class="nav-link">
+              <ion-icon name="fast-food"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Productos</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-section">
+        <h3 *ngIf="!sidebarCollapsed">Reportes</h3>
+        <ul class="nav-list">
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/reportes" class="nav-link">
+              <ion-icon name="bar-chart"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Reportes</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-section">
+        <h3 *ngIf="!sidebarCollapsed">Configuración</h3>
+        <ul class="nav-list">
+          <li class="nav-item" routerLinkActive="active">
+            <a routerLink="/configuracion-restaurante" class="nav-link">
+              <ion-icon name="restaurant"></ion-icon>
+              <span *ngIf="!sidebarCollapsed">Perfil Restaurante</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-profile" *ngIf="!sidebarCollapsed">
+        <div class="user-avatar">
+          <div class="avatar-circle">
+            {{usuarioActual?.nombreCompleto?.charAt(0) || 'U'}}
+          </div>
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{usuarioActual?.nombreCompleto || 'Usuario'}}</div>
+          <div class="user-role">Administrador</div>
+        </div>
+        <button class="user-menu-btn" (click)="toggleMenuUsuario()">
+          <ion-icon name="ellipsis-vertical"></ion-icon>
+        </button>
+        
+        <!-- Menú desplegable del usuario -->
+        <div class="user-dropdown" *ngIf="mostrarMenuUsuario">
+          <div class="dropdown-header">
+            <div class="dropdown-user-info">
+              <strong>{{usuarioActual?.nombreCompleto}}</strong>
+              <span>{{usuarioActual?.email}}</span>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" (click)="toggleMenuUsuario()">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Mi Perfil</span>
+          </button>
+          <button class="dropdown-item" (click)="toggleMenuUsuario()">
+            <ion-icon name="settings-outline"></ion-icon>
+            <span>Configuración</span>
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item logout" (click)="cerrarSesion()">
+            <ion-icon name="log-out-outline"></ion-icon>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
+      <button class="settings-btn" *ngIf="sidebarCollapsed" (click)="cerrarSesion()">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Contenido principal -->
+  <main class="main-content" [class.sidebar-collapsed]="sidebarCollapsed">
+    <!-- Header profesional -->
+    <header class="bocket-header-premium">
+      <div class="header-left">
+        <!-- Botón móvil para abrir/cerrar menu -->
+        <button class="mobile-menu-btn" *ngIf="isMobile" (click)="toggleSidebar()">
+          <ion-icon [name]="isMenuOpen ? 'close' : 'menu'"></ion-icon>
+        </button>
+        <h1 class="page-title">{{pageTitle}}</h1>
+        <nav class="breadcrumb">
+          <span class="breadcrumb-item">{{restauranteActual?.nombre || 'Restaurante'}}</span>
+          <ion-icon name="chevron-forward"></ion-icon>
+          <span class="breadcrumb-item current">{{pageTitle}}</span>
+        </nav>
+      </div>
+      
+      <div class="header-right">
+        <div class="header-actions">
+          <button class="action-btn">
+            <ion-icon name="search"></ion-icon>
+          </button>
+          <button class="action-btn">
+            <ion-icon name="notifications"></ion-icon>
+            <div class="notification-badge">3</div>
+          </button>
+          <button class="action-btn">
+            <ion-icon name="help-circle"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido dinámico -->
+    <div class="content-area">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

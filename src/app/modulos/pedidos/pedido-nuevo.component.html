@@ -1,0 +1,136 @@
+<div class="pedido-nuevo-container">
+  <div class="header-section">
+    <div class="header-content">
+      <button class="back-btn" (click)="cancelar()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <h1>Nuevo Pedido</h1>
+    </div>
+  </div>
+
+  <form [formGroup]="pedidoForm" (ngSubmit)="guardarPedido()" class="pedido-form">
+    
+    <!-- Información del Contacto WhatsApp -->
+    <div class="form-section">
+      <h2>Información del Contacto</h2>
+      
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Contacto WhatsApp *</ion-label>
+          <ion-input 
+            formControlName="contact"
+            placeholder="573001234567">
+          </ion-input>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="pedidoForm.get('contact')?.invalid && pedidoForm.get('contact')?.touched">
+          El contacto de WhatsApp es requerido
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Nombre del Contacto</ion-label>
+          <ion-input 
+            formControlName="contactNameOrder"
+            placeholder="Nombre del cliente (opcional)">
+          </ion-input>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Información del Pedido -->
+    <div class="form-section">
+      <h2>Detalles del Pedido</h2>
+      
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Tipo de Pedido *</ion-label>
+          <ion-select formControlName="orderType">
+            <ion-select-option *ngFor="let tipo of tiposPedido" [value]="tipo.value">
+              {{tipo.label}}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="pedidoForm.get('orderType')?.invalid && pedidoForm.get('orderType')?.touched">
+          El tipo de pedido es requerido
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Resumen del Pedido *</ion-label>
+          <ion-textarea 
+            formControlName="resumeOrder"
+            placeholder="Detalle completo del pedido: productos, cantidades, especificaciones..."
+            rows="4">
+          </ion-textarea>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="pedidoForm.get('resumeOrder')?.invalid && pedidoForm.get('resumeOrder')?.touched">
+          El resumen del pedido es requerido
+        </div>
+      </div>
+
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Estado del Pedido *</ion-label>
+          <ion-select formControlName="statusBooking">
+            <ion-select-option *ngFor="let estado of estadosPedido" [value]="estado.value">
+              {{estado.label}}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Información de Entrega -->
+    <div class="form-section">
+      <h2>Información de Entrega</h2>
+      
+      <div class="form-group">
+        <ion-item>
+          <ion-label position="stacked">Dirección de Entrega</ion-label>
+          <ion-textarea 
+            formControlName="addressToDelivery"
+            placeholder="Dirección completa para delivery o información de pickup"
+            rows="2">
+          </ion-textarea>
+        </ion-item>
+        <div class="error-message" 
+             *ngIf="pedidoForm.get('addressToDelivery')?.invalid && pedidoForm.get('addressToDelivery')?.touched">
+          La dirección es requerida para pedidos de delivery
+        </div>
+        <div class="form-help">
+          <small>
+            • Para delivery: Dirección completa de entrega<br>
+            • Para pickup: Información de recogida<br>
+            • Para pedido interno: Número de mesa o ubicación
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="form-actions">
+      <ion-button 
+        expand="block" 
+        type="submit"
+        [disabled]="pedidoForm.invalid"
+        class="primary-btn">
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        Crear Pedido
+      </ion-button>
+      
+      <ion-button 
+        expand="block" 
+        fill="outline" 
+        (click)="cancelar()"
+        class="secondary-btn">
+        <ion-icon name="close" slot="start"></ion-icon>
+        Cancelar
+      </ion-button>
+    </div>
+  </form>
+</div>

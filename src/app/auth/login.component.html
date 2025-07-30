@@ -1,0 +1,172 @@
+<div class="login-container">
+  <!-- Background decorativo -->
+  <div class="login-background">
+    <div class="bg-gradient"></div>
+    <div class="bg-pattern"></div>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="login-content">
+    
+    <!-- Logo y branding -->
+    <div class="login-header">
+      <div class="logo-container">
+        <img src="assets/logo.png" alt="Bocket CRM" class="login-logo">
+        <h1 class="brand-title">Bocket CRM</h1>
+        <p class="brand-subtitle">Sistema de gestión para restaurantes</p>
+      </div>
+    </div>
+
+    <!-- Formulario de login -->
+    <div class="login-card">
+      <div class="card-header">
+        <h2 class="login-title">Iniciar Sesión</h2>
+        <p class="login-subtitle">Accede a tu panel de administración</p>
+      </div>
+
+      <!-- Error general -->
+      <div *ngIf="error" class="error-banner">
+        <ion-icon name="alert-circle"></ion-icon>
+        <span>{{error}}</span>
+        <button class="error-close" (click)="error = null">
+          <ion-icon name="close"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Formulario -->
+      <form [formGroup]="formularioLogin" (keydown)="onKeyDown($event)" class="login-form">
+        
+        <!-- Campo Email -->
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-container">
+            <div class="input-icon">
+              <ion-icon name="mail"></ion-icon>
+            </div>
+            <input 
+              type="email" 
+              class="form-input"
+              formControlName="email"
+              placeholder="tu@email.com"
+              [class.error]="esCampoInvalido('email')"
+              autocomplete="email">
+          </div>
+          <div class="form-error" *ngIf="esCampoInvalido('email')">
+            {{obtenerMensajeErrorCampo('email')}}
+          </div>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <div class="input-container">
+            <div class="input-icon">
+              <ion-icon name="lock-closed"></ion-icon>
+            </div>
+            <input 
+              [type]="mostrarPassword ? 'text' : 'password'" 
+              class="form-input"
+              formControlName="password"
+              placeholder="Tu contraseña"
+              [class.error]="esCampoInvalido('password')"
+              autocomplete="current-password">
+            <button 
+              type="button" 
+              class="password-toggle"
+              (click)="toggleMostrarPassword()">
+              <ion-icon [name]="mostrarPassword ? 'eye-off' : 'eye'"></ion-icon>
+            </button>
+          </div>
+          <div class="form-error" *ngIf="esCampoInvalido('password')">
+            {{obtenerMensajeErrorCampo('password')}}
+          </div>
+        </div>
+
+        <!-- Opciones adicionales -->
+        <div class="form-options">
+          <label class="checkbox-container">
+            <input type="checkbox" formControlName="recordarme">
+            <span class="checkmark"></span>
+            <span class="checkbox-label">Recordar mi email</span>
+          </label>
+          
+          <button 
+            type="button" 
+            class="link-button"
+            (click)="irARecuperarPassword()">
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+
+
+        <!-- Botón de login -->
+        <button 
+          type="button"
+          class="btn-login"
+          (click)="iniciarSesion()"
+          [disabled]="cargando || formularioLogin.invalid">
+          
+          <ion-icon name="sync" *ngIf="cargando" class="spin"></ion-icon>
+          <ion-icon name="log-in" *ngIf="!cargando"></ion-icon>
+          <span>{{cargando ? 'Iniciando sesión...' : 'Iniciar Sesión'}}</span>
+        </button>
+
+        <!-- Separador -->
+        <div class="separator">
+          <span>o continúa con</span>
+        </div>
+
+        <!-- Login con Google -->
+        <button 
+          type="button"
+          class="btn-google"
+          (click)="iniciarSesionConGoogle()"
+          [disabled]="cargando">
+          <div class="google-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+              <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.04a4.8 4.8 0 0 1-7.18-2.53H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+              <path fill="#FBBC05" d="M4.5 10.49a4.8 4.8 0 0 1 0-3.09V5.33H1.83a8 8 0 0 0 0 7.23l2.67-2.07z"/>
+              <path fill="#EA4335" d="M8.98 4.72c1.16 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.33L4.5 7.4a4.77 4.77 0 0 1 4.48-2.68z"/>
+            </svg>
+          </div>
+          <span>Iniciar con Google</span>
+        </button>
+
+      </form>
+
+      <!-- Footer del card -->
+      <div class="card-footer">
+        <p class="signup-text">
+          ¿No tienes una cuenta?
+          <button class="link-button primary" (click)="irARegistro()">
+            Crear cuenta
+          </button>
+        </p>
+        
+        <!-- Enlace a prueba Firebase (desarrollo) -->
+        <div class="dev-tools" *ngIf="!esProduccion">
+          <button class="link-button secondary" (click)="irAPruebaFirebase()">
+            🔥 Probar Conexión Firebase
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer de la página -->
+    <div class="login-footer">
+      <div class="footer-links">
+        <a href="#" class="footer-link">Términos de Servicio</a>
+        <span class="footer-separator">•</span>
+        <a href="#" class="footer-link">Política de Privacidad</a>
+        <span class="footer-separator">•</span>
+        <a href="#" class="footer-link">Soporte</a>
+      </div>
+      <p class="footer-copyright">
+        © 2025 Bocket CRM. Todos los derechos reservados.
+      </p>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,337 @@
+<div class="formulario-producto-container">
+  <!-- Header del formulario -->
+  <div class="form-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1>{{esEdicion ? 'Editar Producto' : 'Nuevo Producto'}}</h1>
+        <p class="subtitle">Complete la información del producto</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-secondary" (click)="cancelar()">
+          <ion-icon name="close"></ion-icon>
+          Cancelar
+        </button>
+        <button type="button" class="btn-primary" (click)="guardarProducto()" [disabled]="guardando || formularioProducto.invalid">
+          <ion-icon name="save" *ngIf="!guardando"></ion-icon>
+          <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+          {{guardando ? 'Guardando...' : 'Guardar Producto'}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje de error -->
+  <div class="error-message" *ngIf="error">
+    <ion-icon name="alert-circle"></ion-icon>
+    <span>{{error}}</span>
+  </div>
+
+  <!-- Loading state -->
+  <div class="loading-container" *ngIf="cargando">
+    <ion-spinner name="circular"></ion-spinner>
+    <p>Cargando producto...</p>
+  </div>
+
+  <!-- Formulario principal -->
+  <form [formGroup]="formularioProducto" *ngIf="!cargando" class="producto-form">
+    
+    <!-- Presets rápidos -->
+    <div class="presets-section">
+      <h3>Presets Rápidos</h3>
+      <div class="preset-buttons">
+        <button type="button" class="preset-btn" (click)="aplicarPresetComida()">
+          <ion-icon name="restaurant"></ion-icon>
+          Comida
+        </button>
+        <button type="button" class="preset-btn" (click)="aplicarPresetBebida()">
+          <ion-icon name="wine"></ion-icon>
+          Bebida
+        </button>
+        <button type="button" class="preset-btn" (click)="aplicarPresetPostre()">
+          <ion-icon name="ice-cream"></ion-icon>
+          Postre
+        </button>
+      </div>
+    </div>
+
+    <!-- Sección: Información Básica -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <ion-icon name="information-circle"></ion-icon>
+        Información Básica
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group col-2">
+          <label for="nombre">Nombre del Producto *</label>
+          <ion-input 
+            id="nombre" 
+            formControlName="nombre" 
+            placeholder="Ej: Hamburguesa Clásica"
+            [class.error]="esCampoInvalido('nombre')">
+          </ion-input>
+          <div class="error-text" *ngIf="esCampoInvalido('nombre')">
+            {{obtenerMensajeError('nombre')}}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="precio">Precio *</label>
+          <ion-input 
+            id="precio" 
+            type="number" 
+            formControlName="precio" 
+            placeholder="0"
+            [class.error]="esCampoInvalido('precio')">
+          </ion-input>
+          <div class="precio-preview">{{formatearPrecio()}}</div>
+          <div class="error-text" *ngIf="esCampoInvalido('precio')">
+            {{obtenerMensajeError('precio')}}
+          </div>
+        </div>
+
+        <div class="form-group col-3">
+          <label for="descripcion">Descripción *</label>
+          <ion-textarea 
+            id="descripcion" 
+            formControlName="descripcion" 
+            placeholder="Describe el producto, ingredientes principales, etc."
+            rows="3"
+            [class.error]="esCampoInvalido('descripcion')">
+          </ion-textarea>
+          <div class="error-text" *ngIf="esCampoInvalido('descripcion')">
+            {{obtenerMensajeError('descripcion')}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Categoría y Organización -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <ion-icon name="albums"></ion-icon>
+        Categoría y Organización
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="categoria">Categoría *</label>
+          <ion-select 
+            formControlName="categoria.id" 
+            placeholder="Seleccionar categoría"
+            (ionChange)="onCategoriaChange()"
+            [class.error]="esCampoInvalido('categoria.id')">
+            <ion-select-option *ngFor="let categoria of categorias" [value]="categoria.id">
+              {{categoria.nombre}}
+            </ion-select-option>
+          </ion-select>
+          <div class="error-text" *ngIf="esCampoInvalido('categoria.id')">
+            {{obtenerMensajeError('categoria.id')}}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="orden">Orden de Presentación</label>
+          <ion-input 
+            id="orden" 
+            type="number" 
+            formControlName="orden" 
+            placeholder="0">
+          </ion-input>
+          <div class="field-hint">Orden en el menú (menor número = aparece primero)</div>
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Tags</label>
+          <ion-input 
+            id="tags" 
+            formControlName="tags" 
+            placeholder="vegetariano, picante, sin gluten">
+          </ion-input>
+          <div class="field-hint">Separar con comas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Estado y Opciones -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <ion-icon name="options"></ion-icon>
+        Estado y Opciones
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group checkbox-group">
+          <ion-checkbox formControlName="disponible"></ion-checkbox>
+          <label>Disponible para la venta</label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <ion-checkbox formControlName="destacado"></ion-checkbox>
+          <label>Producto destacado</label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <ion-checkbox formControlName="nuevo"></ion-checkbox>
+          <label>Producto nuevo</label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <ion-checkbox formControlName="permitirPersonalizacion"></ion-checkbox>
+          <label>Permitir personalización</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Detalles del Producto -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <ion-icon name="nutrition"></ion-icon>
+        Detalles del Producto
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="tiempoPreparacion">Tiempo de Preparación (min)</label>
+          <ion-input 
+            id="tiempoPreparacion" 
+            type="number" 
+            formControlName="tiempoPreparacion" 
+            placeholder="15">
+          </ion-input>
+        </div>
+
+        <div class="form-group">
+          <label for="calorias">Calorías</label>
+          <ion-input 
+            id="calorias" 
+            type="number" 
+            formControlName="calorias" 
+            placeholder="0">
+          </ion-input>
+        </div>
+
+        <div class="form-group">
+          <label for="descuento">Descuento (%)</label>
+          <ion-input 
+            id="descuento" 
+            type="number" 
+            formControlName="descuento" 
+            placeholder="0"
+            min="0"
+            max="100">
+          </ion-input>
+          <div class="precio-descuento" *ngIf="formularioProducto.get('descuento')?.value > 0">
+            Precio con descuento: {{calcularPrecioConDescuento() | currency:'COP':'symbol':'1.0-0'}}
+          </div>
+        </div>
+
+        <div class="form-group col-2">
+          <label for="ingredientes">Ingredientes Principales</label>
+          <ion-textarea 
+            id="ingredientes" 
+            formControlName="ingredientes" 
+            placeholder="carne, lechuga, tomate, cebolla"
+            rows="2">
+          </ion-textarea>
+          <div class="field-hint">Separar con comas</div>
+        </div>
+
+        <div class="form-group">
+          <label for="alergenos">Alérgenos</label>
+          <ion-input 
+            id="alergenos" 
+            formControlName="alergenos" 
+            placeholder="gluten, lácteos, frutos secos">
+          </ion-input>
+          <div class="field-hint">Separar con comas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Imágenes -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <ion-icon name="images"></ion-icon>
+        Imágenes
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="imagen">Imagen Principal (URL)</label>
+          <ion-input 
+            id="imagen" 
+            formControlName="imagen" 
+            placeholder="https://ejemplo.com/imagen.jpg">
+          </ion-input>
+        </div>
+
+        <div class="form-group">
+          <label for="imagenSecundaria">Imagen Secundaria (URL)</label>
+          <ion-input 
+            id="imagenSecundaria" 
+            formControlName="imagenSecundaria" 
+            placeholder="https://ejemplo.com/imagen2.jpg">
+          </ion-input>
+        </div>
+      </div>
+
+      <!-- Preview de imágenes -->
+      <div class="image-preview" *ngIf="formularioProducto.get('imagen')?.value">
+        <h4>Vista Previa</h4>
+        <img [src]="formularioProducto.get('imagen')?.value" 
+             [alt]="formularioProducto.get('nombre')?.value"
+             (error)="$event.target.style.display='none'"
+             class="preview-image">
+      </div>
+    </div>
+
+    <!-- Opciones adicionales -->
+    <div class="form-section" *ngIf="formularioProducto.get('permitirPersonalizacion')?.value">
+      <h3 class="section-title">
+        <ion-icon name="construct"></ion-icon>
+        Opciones de Personalización
+      </h3>
+      
+      <div class="form-group">
+        <label for="opciones">Opciones Disponibles</label>
+        <ion-textarea 
+          id="opciones" 
+          formControlName="opciones" 
+          placeholder="Sin cebolla, extra queso, término medio, salsa aparte"
+          rows="3">
+        </ion-textarea>
+        <div class="field-hint">Separar con comas. Estas opciones aparecerán al cliente para personalizar el producto.</div>
+      </div>
+    </div>
+
+    <!-- Resumen del producto -->
+    <div class="product-summary">
+      <h3>Resumen del Producto</h3>
+      <div class="summary-content">
+        <div class="summary-item">
+          <strong>Nombre:</strong> {{formularioProducto.get('nombre')?.value || 'Sin nombre'}}
+        </div>
+        <div class="summary-item">
+          <strong>Precio:</strong> {{formatearPrecio()}}
+          <span *ngIf="formularioProducto.get('descuento')?.value > 0" class="discount-info">
+            ({{formularioProducto.get('descuento')?.value}}% descuento = {{calcularPrecioConDescuento() | currency:'COP':'symbol':'1.0-0'}})
+          </span>
+        </div>
+        <div class="summary-item">
+          <strong>Categoría:</strong> {{formularioProducto.get('categoria.nombre')?.value || 'Sin categoría'}}
+        </div>
+        <div class="summary-item">
+          <strong>Tiempo de preparación:</strong> {{formularioProducto.get('tiempoPreparacion')?.value || 0}} minutos
+        </div>
+        <div class="summary-item">
+          <strong>Estado:</strong> 
+          <span [class]="formularioProducto.get('disponible')?.value ? 'status-available' : 'status-unavailable'">
+            {{formularioProducto.get('disponible')?.value ? 'Disponible' : 'No disponible'}}
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>

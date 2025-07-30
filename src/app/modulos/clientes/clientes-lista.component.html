@@ -1,0 +1,159 @@
+<div class="clientes-page bocket-animate-in">
+  <!-- Header de la página -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1>Gestión de Clientes</h1>
+        <p>Administra tu base de clientes de manera profesional</p>
+      </div>
+      <div class="header-actions">
+        <ion-button class="bocket-button-premium" (click)="exportarClientes()">
+          <ion-icon name="download" slot="start"></ion-icon>
+          Exportar
+        </ion-button>
+        <ion-button color="primary" (click)="nuevoCliente()">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Nuevo Cliente
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="filtros-section bocket-card-premium">
+    <div class="filtros-content">
+      <div class="busqueda-container">
+        <ion-searchbar 
+          placeholder="Buscar por nombre, WhatsApp o email..."
+          [(ngModel)]="terminoBusqueda"
+          (ionInput)="buscarClientes($event)"
+          class="searchbar-professional">
+        </ion-searchbar>
+      </div>
+      
+      <div class="filtros-avanzados">
+        <ion-segment [(ngModel)]="filtroTipo" (ionChange)="filtrarPorTipo($event)">
+          <ion-segment-button value="todos">
+            <ion-label>Todos ({{clientes.length}})</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="vip">
+            <ion-label>VIP ({{contarPorTipo('vip')}})</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="regular">
+            <ion-label>Regular ({{contarPorTipo('regular')}})</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="corporativo">
+            <ion-label>Corporativo ({{contarPorTipo('corporativo')}})</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de clientes profesional -->
+  <div class="clientes-grid">
+    <div class="cliente-card bocket-card-premium" 
+         *ngFor="let cliente of clientesFiltrados; trackBy: trackByClienteId" 
+         (click)="verDetalleCliente(cliente)">
+      
+      <div class="cliente-header">
+        <div class="cliente-avatar">
+          <img [src]="cliente.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face'" 
+               [alt]="cliente.name || cliente.whatsAppName">
+        </div>
+        
+        <div class="cliente-info-principal">
+          <h3 class="cliente-nombre">{{cliente.name || cliente.whatsAppName}}</h3>
+          <div class="cliente-contacto">
+            <span class="whatsapp">
+              <ion-icon name="logo-whatsapp"></ion-icon>
+              {{cliente.id}}
+            </span>
+            <span class="source-type">
+              <ion-icon name="radio-button-on"></ion-icon>
+              {{cliente.sourceType === 'chatBot' ? 'ChatBot' : 'Manual'}}
+            </span>
+          </div>
+        </div>
+        
+        <div class="cliente-badges">
+          <div class="bocket-chip" [ngClass]="'status-' + getClienteType(cliente)">
+            {{getClienteType(cliente) | titlecase}}
+          </div>
+          <div class="bocket-chip status-whatsapp" *ngIf="cliente.isWAContact">
+            WhatsApp
+          </div>
+          <div class="bocket-chip status-enterprise" *ngIf="cliente.isEnterprise">
+            Empresa
+          </div>
+        </div>
+      </div>
+      
+      <div class="cliente-stats">
+        <div class="stat-item">
+          <span class="stat-label">Última actualización</span>
+          <span class="stat-value">{{formatearFecha(cliente.lastUpdate)}}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Contacto desde</span>
+          <span class="stat-value">{{formatearFecha(cliente.creation)}}</span>
+        </div>
+        <div class="stat-item" *ngIf="cliente.userInteractions?.whatsapp">
+          <span class="stat-label">Mensajes WhatsApp</span>
+          <span class="stat-value">{{cliente.userInteractions?.whatsapp}}</span>
+        </div>
+        <div class="stat-item" *ngIf="cliente.userInteractions?.fee">
+          <span class="stat-label">Fee total</span>
+          <span class="stat-value">${{cliente.userInteractions?.fee | number:'1.0-0'}}</span>
+        </div>
+        <div class="stat-item" *ngIf="cliente.labels">
+          <span class="stat-label">Etiquetas</span>
+          <span class="stat-value">{{cliente.labels}}</span>
+        </div>
+      </div>
+      
+      <div class="cliente-acciones">
+        <ion-button fill="clear" size="small" (click)="editarCliente(cliente, $event)">
+          <ion-icon name="create" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" size="small" (click)="contactarCliente(cliente, $event)">
+          <ion-icon name="chatbubble" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" size="small" (click)="verHistorial(cliente, $event)">
+          <ion-icon name="time" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado vacío -->
+  <div class="estado-vacio" *ngIf="clientesFiltrados.length === 0">
+    <div class="vacio-icon">
+      <ion-icon name="people-outline"></ion-icon>
+    </div>
+    <h3>No se encontraron clientes</h3>
+    <p>{{terminoBusqueda ? 'Intenta con otros términos de búsqueda' : 'Agrega tu primer cliente para comenzar'}}</p>
+    <ion-button color="primary" (click)="nuevoCliente()">
+      <ion-icon name="add" slot="start"></ion-icon>
+      Agregar Cliente
+    </ion-button>
+  </div>
+
+  <!-- Estadísticas rápidas -->
+  <div class="stats-footer">
+    <div class="quick-stats">
+      <div class="quick-stat">
+        <span class="stat-number">{{clientes.length}}</span>
+        <span class="stat-text">Total Clientes</span>
+      </div>
+      <div class="quick-stat">
+        <span class="stat-number">{{clientesActivos}}</span>
+        <span class="stat-text">Activos</span>
+      </div>
+      <div class="quick-stat">
+        <span class="stat-number">{{clientesNuevosEsteMes}}</span>
+        <span class="stat-text">Nuevos este mes</span>
+      </div>
+    </div>
+  </div>
+</div>

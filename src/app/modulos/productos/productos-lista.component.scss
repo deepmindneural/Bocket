@@ -1,0 +1,65 @@
+.productos-page {
+  padding: var(--bocket-space-6);
+  background: var(--bocket-gray-50);
+  min-height: 100vh;
+
+  @media (max-width: 768px) {
+    padding: var(--bocket-space-4);
+  }
+}
+
+.page-header {
+  margin-bottom: var(--bocket-space-6);
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: var(--bocket-space-4);
+    }
+  }
+
+  .header-info {
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--bocket-gray-900);
+      margin: 0 0 var(--bocket-space-2) 0;
+    }
+
+    p {
+      color: var(--bocket-gray-600);
+      margin: 0;
+      font-size: 16px;
+    }
+  }
+}
+
+.contenido-proximamente {
+  padding: var(--bocket-space-12);
+  text-align: center;
+
+  .proximamente-content {
+    ion-icon {
+      font-size: 80px;
+      color: var(--bocket-primary-300);
+      margin-bottom: var(--bocket-space-6);
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--bocket-gray-900);
+      margin: 0 0 var(--bocket-space-4) 0;
+    }
+
+    p {
+      color: var(--bocket-gray-600);
+      font-size: 16px;
+      margin: 0;
+    }
+  }
+}

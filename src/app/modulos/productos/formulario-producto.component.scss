@@ -1,0 +1,394 @@
+.formulario-producto-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.form-header {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+  padding: 24px;
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    .header-info {
+      h1 {
+        margin: 0 0 8px 0;
+        color: var(--ion-color-primary, #3880ff);
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--ion-text-color-step-400);
+        font-size: 0.95rem;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  ion-icon {
+    font-size: 1.2rem;
+  }
+}
+
+.loading-container {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ion-text-color-step-400);
+
+  ion-spinner {
+    margin-bottom: 16px;
+  }
+}
+
+.presets-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 24px;
+
+  h3 {
+    margin: 0 0 16px 0;
+    color: var(--ion-color-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .preset-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    .preset-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--ion-color-light);
+      border: 2px solid var(--ion-color-medium-tint);
+      border-radius: 8px;
+      color: var(--ion-color-dark);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: var(--ion-color-primary-tint);
+        border-color: var(--ion-color-primary);
+        color: var(--ion-color-primary);
+        transform: translateY(-1px);
+      }
+
+      ion-icon {
+        font-size: 1.1rem;
+      }
+    }
+  }
+}
+
+.producto-form {
+  .form-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 20px 0;
+      color: var(--ion-color-primary);
+      font-size: 1.2rem;
+      font-weight: 600;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--ion-color-light);
+
+      ion-icon {
+        font-size: 1.3rem;
+      }
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+
+      @media (min-width: 768px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      @media (min-width: 1024px) {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .col-2 {
+        @media (min-width: 768px) {
+          grid-column: span 2;
+        }
+      }
+
+      .col-3 {
+        @media (min-width: 768px) {
+          grid-column: span 2;
+        }
+        @media (min-width: 1024px) {
+          grid-column: span 3;
+        }
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      &.checkbox-group {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+
+        ion-checkbox {
+          margin: 0;
+        }
+
+        label {
+          margin: 0;
+          cursor: pointer;
+          font-weight: 500;
+        }
+      }
+
+      label {
+        font-weight: 600;
+        color: var(--ion-color-dark);
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+      }
+
+      ion-input, ion-select, ion-textarea {
+        --border-width: 2px;
+        --border-color: var(--ion-color-medium-tint);
+        --border-radius: 8px;
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --padding-top: 12px;
+        --padding-bottom: 12px;
+
+        &.error {
+          --border-color: var(--ion-color-danger);
+        }
+
+        &:focus-within {
+          --border-color: var(--ion-color-primary);
+        }
+      }
+
+      .field-hint {
+        font-size: 0.8rem;
+        color: var(--ion-text-color-step-400);
+        margin-top: 4px;
+      }
+
+      .error-text {
+        color: var(--ion-color-danger);
+        font-size: 0.8rem;
+        margin-top: 4px;
+      }
+
+      .precio-preview {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--ion-color-success);
+        margin-top: 4px;
+      }
+
+      .precio-descuento {
+        font-size: 0.9rem;
+        color: var(--ion-color-warning);
+        font-weight: 500;
+        margin-top: 4px;
+      }
+    }
+  }
+
+  .image-preview {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ion-color-light);
+
+    h4 {
+      margin: 0 0 12px 0;
+      color: var(--ion-color-dark);
+      font-size: 1rem;
+    }
+
+    .preview-image {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      object-fit: cover;
+    }
+  }
+
+  .product-summary {
+    background: linear-gradient(135deg, var(--ion-color-primary-tint), var(--ion-color-secondary-tint));
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+
+    h3 {
+      margin: 0 0 16px 0;
+      color: var(--ion-color-primary-contrast);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .summary-content {
+      display: grid;
+      gap: 12px;
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--ion-color-primary-contrast);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        strong {
+          font-weight: 600;
+        }
+
+        .discount-info {
+          font-size: 0.85rem;
+          opacity: 0.8;
+        }
+
+        .status-available {
+          color: var(--ion-color-success);
+          font-weight: 600;
+        }
+
+        .status-unavailable {
+          color: var(--ion-color-danger);
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+.btn-primary, .btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+
+  ion-icon {
+    font-size: 1.1rem;
+
+    &.spin {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+
+  &:hover:not(:disabled) {
+    background: var(--ion-color-primary-shade);
+    transform: translateY(-1px);
+  }
+}
+
+.btn-secondary {
+  background: var(--ion-color-light);
+  color: var(--ion-color-dark);
+  border: 2px solid var(--ion-color-medium-tint);
+
+  &:hover {
+    background: var(--ion-color-medium-tint);
+    border-color: var(--ion-color-medium);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Responsive adjustments
+@media (max-width: 767px) {
+  .formulario-producto-container {
+    padding: 16px;
+  }
+
+  .form-header .header-content {
+    flex-direction: column;
+    align-items: stretch;
+
+    .header-actions {
+      justify-content: stretch;
+
+      .btn-primary, .btn-secondary {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+  }
+
+  .presets-section .preset-buttons {
+    .preset-btn {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+}

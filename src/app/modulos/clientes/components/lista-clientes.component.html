@@ -1,0 +1,248 @@
+<div class="clientes-container">
+  <!-- Header con acciones -->
+  <div class="clientes-header">
+    <div class="header-left">
+      <h2 class="module-title">
+        <ion-icon name="people"></ion-icon>
+        Gestión de Clientes
+      </h2>
+      <p class="module-subtitle">Administra la información de tus clientes</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="nuevoCliente()">
+        <ion-icon name="add"></ion-icon>
+        Nuevo Cliente
+      </button>
+      <button class="btn-secondary" (click)="exportarClientes()">
+        <ion-icon name="download"></ion-icon>
+        Exportar
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="filtros-card">
+    <div class="filtros-row">
+      <!-- Búsqueda -->
+      <div class="search-container">
+        <ion-icon name="search"></ion-icon>
+        <input 
+          type="text" 
+          placeholder="Buscar por nombre, email o teléfono..."
+          [(ngModel)]="terminoBusqueda"
+          (input)="aplicarFiltros()"
+          class="search-input">
+      </div>
+
+      <!-- Filtros -->
+      <div class="filtros-group">
+        <select [(ngModel)]="filtroEstado" (change)="aplicarFiltros()" class="filter-select">
+          <option value="todos">Todos los estados</option>
+          <option value="activo">Activos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+
+        <select [(ngModel)]="filtroTipo" (change)="aplicarFiltros()" class="filter-select">
+          <option value="todos">Todos los tipos</option>
+          <option value="regular">Regular</option>
+          <option value="vip">VIP</option>
+          <option value="corporativo">Corporativo</option>
+          <option value="ocasional">Ocasional</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="stats-row">
+      <div class="stat-item">
+        <span class="stat-number">{{totalClientes}}</span>
+        <span class="stat-label">Total Clientes</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">{{clientesActivos}}</span>
+        <span class="stat-label">Activos</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">{{clientesVIP}}</span>
+        <span class="stat-label">VIP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="cargando" class="loading-container">
+    <div class="loading-spinner">
+      <ion-icon name="sync" class="spin"></ion-icon>
+      <p>Cargando clientes...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !cargando" class="error-container">
+    <ion-icon name="alert-circle"></ion-icon>
+    <p>{{error}}</p>
+    <button class="btn-secondary" (click)="cargarClientes()">
+      <ion-icon name="refresh"></ion-icon>
+      Reintentar
+    </button>
+  </div>
+
+  <!-- Tabla de clientes -->
+  <div *ngIf="!cargando && !error" class="clientes-table-container">
+    <div class="table-responsive">
+      <table class="clientes-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Contacto</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Última Visita</th>
+            <th>Total Pedidos</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cliente of obtenerClientesPagina()" class="cliente-row">
+            <!-- Información del cliente -->
+            <td class="cliente-info">
+              <div class="cliente-avatar">
+                <div class="avatar-circle" [style.background-color]="'#6b73ff'">
+                  {{(cliente.name || cliente.whatsAppName || 'C').charAt(0).toUpperCase()}}
+                </div>
+              </div>
+              <div class="cliente-details">
+                <div class="cliente-nombre">{{cliente.name || cliente.whatsAppName}}</div>
+                <div class="cliente-id">#{{cliente.id?.slice(-6) || '000000'}}</div>
+              </div>
+            </td>
+
+            <!-- Contacto -->
+            <td class="cliente-contacto">
+              <div class="contacto-item">
+                <ion-icon name="mail"></ion-icon>
+                <span>{{cliente.email}}</span>
+              </div>
+              <div class="contacto-item" *ngIf="cliente.id">
+                <ion-icon name="call"></ion-icon>
+                <span>{{cliente.id}}</span>
+              </div>
+            </td>
+
+            <!-- Tipo de cliente -->
+            <td>
+              <span class="tipo-badge" [class]="obtenerClaseTipo(getClienteType(cliente))">
+                {{obtenerEtiquetaTipoCliente(getClienteType(cliente))}}
+              </span>
+            </td>
+
+            <!-- Estado -->
+            <td>
+              <span class="estado-badge" [class]="obtenerClaseEstado(cliente.isWAContact)">
+                <ion-icon [name]="cliente.isWAContact ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+                {{cliente.isWAContact ? 'WhatsApp' : 'Inactivo'}}
+              </span>
+            </td>
+
+            <!-- Última visita -->
+            <td class="fecha-column">
+              <span *ngIf="cliente.lastUpdate">
+                {{formatearFecha(cliente.lastUpdate)}}
+              </span>
+              <span *ngIf="!cliente.lastUpdate" class="sin-datos">
+                Sin visitas
+              </span>
+            </td>
+
+            <!-- Total pedidos -->
+            <td class="numero-column">
+              <span class="numero-destaque">
+                {{(cliente.userInteractions?.fee || 0) | currency:'COP':'symbol':'1.0-0'}}
+              </span>
+              <div class="numero-sub">
+                {{cliente.userInteractions?.client || 0}} interacciones
+              </div>
+            </td>
+
+            <!-- Acciones -->
+            <td class="acciones-column">
+              <div class="acciones-group">
+                <button 
+                  class="btn-accion btn-ver" 
+                  (click)="verDetalleCliente(cliente)"
+                  title="Ver detalles">
+                  <ion-icon name="eye"></ion-icon>
+                </button>
+                <button 
+                  class="btn-accion btn-editar" 
+                  (click)="editarCliente(cliente)"
+                  title="Editar">
+                  <ion-icon name="create"></ion-icon>
+                </button>
+                <button 
+                  class="btn-accion btn-eliminar" 
+                  (click)="eliminarCliente(cliente)"
+                  title="Eliminar">
+                  <ion-icon name="trash"></ion-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="obtenerClientesPagina().length === 0" class="empty-state">
+      <div class="empty-icon">
+        <ion-icon name="people-outline"></ion-icon>
+      </div>
+      <h3>No se encontraron clientes</h3>
+      <p *ngIf="terminoBusqueda || filtroEstado !== 'todos' || filtroTipo !== 'todos'">
+        Intenta ajustar los filtros de búsqueda
+      </p>
+      <p *ngIf="!terminoBusqueda && filtroEstado === 'todos' && filtroTipo === 'todos'">
+        Comienza agregando tu primer cliente
+      </p>
+      <button class="btn-primary" (click)="nuevoCliente()">
+        <ion-icon name="add"></ion-icon>
+        Agregar Cliente
+      </button>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  <div *ngIf="obtenerTotalPaginas() > 1" class="pagination-container">
+    <div class="pagination-info">
+      Mostrando {{((paginaActual - 1) * clientesPorPagina) + 1}} - 
+      {{Math.min(paginaActual * clientesPorPagina, totalClientes)}} 
+      de {{totalClientes}} clientes
+    </div>
+    
+    <div class="pagination-controls">
+      <button 
+        class="btn-pagination" 
+        [disabled]="paginaActual === 1"
+        (click)="cambiarPagina(paginaActual - 1)">
+        <ion-icon name="chevron-back"></ion-icon>
+      </button>
+      
+      <div class="pagination-numbers">
+        <button 
+          *ngFor="let pagina of [].constructor(obtenerTotalPaginas()); let i = index"
+          class="btn-page-number"
+          [class.active]="i + 1 === paginaActual"
+          (click)="cambiarPagina(i + 1)">
+          {{i + 1}}
+        </button>
+      </div>
+      
+      <button 
+        class="btn-pagination" 
+        [disabled]="paginaActual === obtenerTotalPaginas()"
+        (click)="cambiarPagina(paginaActual + 1)">
+        <ion-icon name="chevron-forward"></ion-icon>
+      </button>
+    </div>
+  </div>
+</div>

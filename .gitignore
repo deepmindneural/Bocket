@@ -68,3 +68,19 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Firebase credentials and sensitive files
+**/service-account*.json
+**/*credentials*.json
+test-configuracion-restaurante.js
+consultar-firestore.js
+search-specific-fields.js
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
+
+# Claude files
+.claude/
+CLAUDE.md

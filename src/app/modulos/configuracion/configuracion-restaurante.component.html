@@ -1,0 +1,568 @@
+<div class="configuracion-container">
+  <!-- Header dinámico -->
+  <div class="config-header">
+    <div class="header-content">
+      <div class="restaurant-info">
+        <div class="restaurant-logo" *ngIf="restauranteActual?.logo">
+          <img [src]="restauranteActual?.logo" [alt]="restauranteActual?.nombre">
+        </div>
+        <div class="restaurant-details">
+          <h1 class="restaurant-name">{{restauranteActual?.nombre || 'Configuración Restaurante'}}</h1>
+          <p class="restaurant-subtitle">Panel de configuración y estadísticas</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" (click)="recargarDatos()">
+          <ion-icon name="refresh" [class.spin]="cargando"></ion-icon>
+          Actualizar
+        </button>
+        <button class="btn-primary" (click)="guardarConfiguracion()" [disabled]="guardando">
+          <ion-icon name="save" *ngIf="!guardando"></ion-icon>
+          <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+          {{guardando ? 'Guardando...' : 'Guardar Cambios'}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs de navegación -->
+  <div class="config-tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="tabActivo === 'general'"
+      (click)="cambiarTab('general')">
+      <ion-icon name="business"></ion-icon>
+      Información General
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="tabActivo === 'interacciones'"
+      (click)="cambiarTab('interacciones')">
+      <ion-icon name="analytics"></ion-icon>
+      UserInteractions
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="tabActivo === 'whatsapp'"
+      (click)="cambiarTab('whatsapp')">
+      <ion-icon name="logo-whatsapp"></ion-icon>
+      WhatsApp Config
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="tabActivo === 'pedidos'"
+      (click)="cambiarTab('pedidos')">
+      <ion-icon name="restaurant"></ion-icon>
+      Pedidos & Delivery
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="cargando" class="loading-container">
+    <div class="loading-spinner">
+      <ion-icon name="sync" class="spin"></ion-icon>
+      <p>Cargando configuración...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error" class="error-container">
+    <ion-icon name="alert-circle"></ion-icon>
+    <p>{{error}}</p>
+  </div>
+
+  <!-- Contenido de tabs -->
+  <div class="tab-content" *ngIf="!cargando">
+    
+    <!-- Tab: Información General -->
+    <div class="tab-panel" [class.active]="tabActivo === 'general'">
+      <form [formGroup]="formularioRestaurante" class="config-form">
+        
+        <div class="form-section">
+          <h3 class="section-title">
+            <ion-icon name="business"></ion-icon>
+            Información del Restaurante
+          </h3>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label required">Nombre del Restaurante</label>
+              <input type="text" class="form-input" formControlName="nombre">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label required">Slug (URL)</label>
+              <input type="text" class="form-input" formControlName="slug">
+              <div class="form-help">URL amigable: /{{formularioRestaurante.get('slug')?.value}}</div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" formControlName="email">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Teléfono</label>
+              <input type="tel" class="form-input" formControlName="telefono">
+            </div>
+            
+            <div class="form-group span-2">
+              <label class="form-label">Dirección</label>
+              <input type="text" class="form-input" formControlName="direccion">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Ciudad</label>
+              <input type="text" class="form-input" formControlName="ciudad">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">URL Logo</label>
+              <input type="url" class="form-input" formControlName="logo">
+            </div>
+            
+            <div class="form-group span-2">
+              <label class="form-label">Descripción</label>
+              <textarea class="form-input" formControlName="descripcion" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="section-title">
+            <ion-icon name="color-palette"></ion-icon>
+            Branding y Colores
+          </h3>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Color Primario</label>
+              <div class="color-input-group">
+                <input type="color" class="color-picker" formControlName="colorPrimario">
+                <input type="text" class="form-input" formControlName="colorPrimario">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Color Secundario</label>
+              <div class="color-input-group">
+                <input type="color" class="color-picker" formControlName="colorSecundario">
+                <input type="text" class="form-input" formControlName="colorSecundario">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Vista previa de colores -->
+          <div class="color-preview">
+            <div class="preview-card" 
+                 [style.background]="formularioRestaurante.get('colorPrimario')?.value"
+                 [style.color]="getContrastColor(formularioRestaurante.get('colorPrimario')?.value)">
+              <h4>Primario</h4>
+              <p>Ejemplo de texto</p>
+            </div>
+            <div class="preview-card" 
+                 [style.background]="formularioRestaurante.get('colorSecundario')?.value"
+                 [style.color]="getContrastColor(formularioRestaurante.get('colorSecundario')?.value)">
+              <h4>Secundario</h4>
+              <p>Ejemplo de texto</p>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tab: UserInteractions -->
+    <div class="tab-panel" [class.active]="tabActivo === 'interacciones'">
+      <div class="interactions-section">
+        <h3 class="section-title">
+          <ion-icon name="analytics"></ion-icon>
+          Configuración de UserInteractions
+        </h3>
+        <p class="section-subtitle">
+          Configura los tipos de interacciones que se registrarán para los clientes
+        </p>
+
+        <!-- Configuración de tipos de interacción -->
+        <form [formGroup]="formularioInteracciones" class="interactions-form">
+          <div class="interactions-grid">
+            
+            <!-- WhatsApp -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon whatsapp">
+                  <ion-icon name="logo-whatsapp"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>WhatsApp</h4>
+                  <p>Mensajes recibidos/enviados por WhatsApp</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="whatsappActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('whatsappActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="whatsappValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="whatsappLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Controller -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon controller">
+                  <ion-icon name="person"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Controller</h4>
+                  <p>Interacciones gestionadas por operadores</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="controllerActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('controllerActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="controllerValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="controllerLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Chatbot -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon chatbot">
+                  <ion-icon name="chatbubble-ellipses"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Chatbot</h4>
+                  <p>Respuestas automáticas del chatbot</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="chatbotActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('chatbotActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="chatbotValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="chatbotLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- API -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon api">
+                  <ion-icon name="code"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>API</h4>
+                  <p>Llamadas a la API del sistema</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="apiActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('apiActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="apiValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="apiLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Campaign -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon campaign">
+                  <ion-icon name="megaphone"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Campañas</h4>
+                  <p>Mensajes de campañas de marketing</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="campaingActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('campaingActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="campaingValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="campaingLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Client -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon client">
+                  <ion-icon name="person-circle"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Cliente</h4>
+                  <p>Interacciones iniciadas por el cliente</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="clientActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('clientActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="clientValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="clientLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Others -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon others">
+                  <ion-icon name="ellipsis-horizontal"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Otros</h4>
+                  <p>Otras interacciones no categorizadas</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="othersActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('othersActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="othersValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="othersLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- WappController -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon wapp-controller">
+                  <ion-icon name="desktop"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Wapp Controller</h4>
+                  <p>Controlador de WhatsApp avanzado</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="wappControllerActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('wappControllerActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="wappControllerValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="wappControllerLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- AI -->
+            <div class="interaction-card">
+              <div class="card-header">
+                <div class="interaction-icon ai">
+                  <ion-icon name="sparkles"></ion-icon>
+                </div>
+                <div class="interaction-info">
+                  <h4>Inteligencia Artificial</h4>
+                  <p>Respuestas generadas por IA</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" formControlName="aiActivo">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="card-content" *ngIf="formularioInteracciones.get('aiActivo')?.value">
+                <div class="form-group">
+                  <label>Valor por interacción (COP)</label>
+                  <input type="number" class="form-input" formControlName="aiValor" min="0">
+                </div>
+                <div class="form-group">
+                  <label>Límite diario</label>
+                  <input type="number" class="form-input" formControlName="aiLimite" min="0">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Resumen de configuración -->
+          <div class="interactions-summary">
+            <h4>Resumen de Configuración</h4>
+            <div class="summary-stats">
+              <div class="summary-item">
+                <span class="summary-label">Tipos Activos:</span>
+                <span class="summary-value">{{contarTiposActivos()}}/9</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Costo Total Estimado (por día):</span>
+                <span class="summary-value">${{calcularCostoEstimado() | number:'1.0-0'}} COP</span>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Tab: WhatsApp Config -->
+    <div class="tab-panel" [class.active]="tabActivo === 'whatsapp'">
+      <form [formGroup]="formularioRestaurante">
+        <div formGroupName="configuracion">
+          <div formGroupName="whatsapp" class="whatsapp-config">
+            <h3 class="section-title">
+              <ion-icon name="logo-whatsapp"></ion-icon>
+              Configuración de WhatsApp
+            </h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Número del Bot</label>
+                <input type="tel" class="form-input" formControlName="numeroBot" placeholder="Opcional: +57 300 000 0000">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Respuesta Automática</label>
+                <label class="switch">
+                  <input type="checkbox" formControlName="respuestaAutomatica">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              
+              <div formGroupName="horarioBot" class="form-group span-2">
+                <label class="form-label">Horario del Bot</label>
+                <div class="time-range">
+                  <input type="time" class="form-input" formControlName="inicio">
+                  <span>hasta</span>
+                  <input type="time" class="form-input" formControlName="fin">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tab: Pedidos & Delivery -->
+    <div class="tab-panel" [class.active]="tabActivo === 'pedidos'">
+      <form [formGroup]="formularioRestaurante">
+        <div formGroupName="configuracion">
+          <div formGroupName="pedidos" class="pedidos-config">
+            <h3 class="section-title">
+              <ion-icon name="restaurant"></ion-icon>
+              Configuración de Pedidos y Delivery
+            </h3>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Tiempo de Entrega (minutos)</label>
+                <input type="number" class="form-input" formControlName="tiempoEntrega" min="15" max="120">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Costo de Delivery (COP)</label>
+                <input type="number" class="form-input" formControlName="costoDelivery" min="0">
+              </div>
+              
+              <div class="form-group span-2">
+                <label class="form-label">Monto Mínimo Delivery (COP)</label>
+                <input type="number" class="form-input" formControlName="montoMinimoDelivery" min="0">
+              </div>
+            </div>
+
+            <!-- Estados permitidos -->
+            <div class="form-section">
+              <h4>Estados Permitidos para Pedidos</h4>
+              <div class="checkbox-grid" formArrayName="estadosPermitidos">
+                <label class="checkbox-item" *ngFor="let estado of estadosPedidos; let i = index">
+                  <input type="checkbox" [formControlName]="i">
+                  <span class="checkmark"></span>
+                  <span class="estado-label">{{getEstadoLabel(estado)}}</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Tipos permitidos -->
+            <div class="form-section">
+              <h4>Tipos de Pedido Permitidos</h4>
+              <div class="checkbox-grid" formArrayName="tiposPermitidos">
+                <label class="checkbox-item" *ngFor="let tipo of tiposPedidos; let i = index">
+                  <input type="checkbox" [formControlName]="i">
+                  <span class="checkmark"></span>
+                  <span class="tipo-label">{{getTipoLabel(tipo)}}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Botones de acción fijos -->
+  <div class="form-actions-sticky">
+    <div class="actions-container">
+      <button class="btn-secondary-large" (click)="cancelarCambios()" [disabled]="guardando">
+        <ion-icon name="close"></ion-icon>
+        Cancelar
+      </button>
+      <button class="btn-warning-large" (click)="resetearConfiguracion()" [disabled]="guardando">
+        <ion-icon name="refresh"></ion-icon>
+        Resetear
+      </button>
+      <button 
+        class="btn-primary-large" 
+        (click)="guardarConfiguracion()" 
+        [disabled]="guardando">
+        <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+        <ion-icon name="save" *ngIf="!guardando"></ion-icon>
+        {{guardando ? 'Guardando...' : 'Guardar Configuración'}}
+      </button>
+    </div>
+  </div>
+</div>

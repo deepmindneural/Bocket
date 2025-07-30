@@ -1,2 +1,476 @@
-// For information on how to create your own theme, please see:
-// http://ionicframework.com/docs/theming/
+// Bocket CRM - Tema profesional moderno
+// Sistema de colores corporativo avanzado
+
+:root {
+  // Paleta primaria Bocket - Azul corporativo
+  --bocket-primary-50: #e8f2ff;
+  --bocket-primary-100: #c3d9ff;
+  --bocket-primary-200: #9bc0ff;
+  --bocket-primary-300: #73a7ff;
+  --bocket-primary-400: #4d8eff;
+  --bocket-primary-500: #004aad; // Color principal
+  --bocket-primary-600: #00429c;
+  --bocket-primary-700: #003a8b;
+  --bocket-primary-800: #00327a;
+  --bocket-primary-900: #002269;
+
+  // Paleta secundaria - Fuscia elegante
+  --bocket-secondary-50: #fdf2f8;
+  --bocket-secondary-100: #fce7f3;
+  --bocket-secondary-200: #f8d1e8;
+  --bocket-secondary-300: #f3a8d0;
+  --bocket-secondary-400: #ee7fb8;
+  --bocket-secondary-500: #d636a0; // Color secundario
+  --bocket-secondary-600: #c1298e;
+  --bocket-secondary-700: #ac1c7c;
+  --bocket-secondary-800: #97106a;
+  --bocket-secondary-900: #820458;
+
+  // Grises profesionales
+  --bocket-gray-50: #f8fafc;
+  --bocket-gray-100: #f1f5f9;
+  --bocket-gray-200: #e2e8f0;
+  --bocket-gray-300: #cbd5e1;
+  --bocket-gray-400: #94a3b8;
+  --bocket-gray-500: #64748b;
+  --bocket-gray-600: #475569;
+  --bocket-gray-700: #334155;
+  --bocket-gray-800: #1e293b;
+  --bocket-gray-900: #0f172a;
+
+  // Colores Ionic actualizados
+  --ion-color-primary: var(--bocket-primary-500);
+  --ion-color-primary-rgb: 0, 74, 173;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--bocket-primary-600);
+  --ion-color-primary-tint: var(--bocket-primary-400);
+
+  --ion-color-secondary: var(--bocket-secondary-500);
+  --ion-color-secondary-rgb: 214, 54, 160;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: var(--bocket-secondary-600);
+  --ion-color-secondary-tint: var(--bocket-secondary-400);
+
+  // Colores de apoyo
+  --ion-color-tertiary: #5260ff;
+  --ion-color-tertiary-rgb: 82, 96, 255;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #4854e0;
+  --ion-color-tertiary-tint: #6370ff;
+
+  --ion-color-success: #2dd36f;
+  --ion-color-success-rgb: 45, 211, 111;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #28ba62;
+  --ion-color-success-tint: #42d77d;
+
+  --ion-color-warning: #ffc409;
+  --ion-color-warning-rgb: 255, 196, 9;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #e0ac08;
+  --ion-color-warning-tint: #ffca22;
+
+  --ion-color-danger: #eb445a;
+  --ion-color-danger-rgb: 235, 68, 90;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #cf3c4f;
+  --ion-color-danger-tint: #ed576b;
+
+  --ion-color-dark: #222428;
+  --ion-color-dark-rgb: 34, 36, 40;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1e2023;
+  --ion-color-dark-tint: #383a3e;
+
+  --ion-color-medium: #92949c;
+  --ion-color-medium-rgb: 146, 148, 156;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #808289;
+  --ion-color-medium-tint: #9d9fa6;
+
+  --ion-color-light: #f4f5f8;
+  --ion-color-light-rgb: 244, 245, 248;
+  --ion-color-light-contrast: #000000;
+  --ion-color-light-contrast-rgb: 0, 0, 0;
+  --ion-color-light-shade: #d7d8da;
+  --ion-color-light-tint: #f5f6f9;
+
+  // Sistema de estado semántico mejorado
+  --bocket-success: #10b981;
+  --bocket-success-light: #a7f3d0;
+  --bocket-warning: #f59e0b;
+  --bocket-warning-light: #fde68a;
+  --bocket-error: #ef4444;
+  --bocket-error-light: #fecaca;
+  --bocket-info: var(--bocket-primary-500);
+  --bocket-info-light: var(--bocket-primary-100);
+
+  // Sombras profesionales mejoradas
+  --bocket-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
+  --bocket-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.12), 0 1px 2px -1px rgba(15, 23, 42, 0.1);
+  --bocket-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.12), 0 2px 4px -2px rgba(15, 23, 42, 0.08);
+  --bocket-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+  --bocket-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  --bocket-shadow-2xl: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+
+  // Sombras con colores corporativos
+  --bocket-shadow-primary: 0 4px 14px rgba(0, 74, 173, 0.15);
+  --bocket-shadow-secondary: 0 4px 14px rgba(214, 54, 160, 0.15);
+  --bocket-shadow-success: 0 4px 14px rgba(16, 185, 129, 0.15);
+
+  // Bordes y radios
+  --bocket-radius-sm: 4px;
+  --bocket-radius: 8px;
+  --bocket-radius-md: 12px;
+  --bocket-radius-lg: 16px;
+  --bocket-radius-xl: 20px;
+  --bocket-radius-full: 9999px;
+
+  // Espaciado sistema 8px
+  --bocket-space-1: 4px;
+  --bocket-space-2: 8px;
+  --bocket-space-3: 12px;
+  --bocket-space-4: 16px;
+  --bocket-space-5: 20px;
+  --bocket-space-6: 24px;
+  --bocket-space-8: 32px;
+  --bocket-space-10: 40px;
+  --bocket-space-12: 48px;
+  --bocket-space-16: 64px;
+  --bocket-space-20: 80px;
+
+  // Gradientes corporativos profesionales
+  --bocket-gradient-primary: linear-gradient(135deg, var(--bocket-primary-500) 0%, var(--bocket-primary-600) 50%, var(--bocket-primary-700) 100%);
+  --bocket-gradient-secondary: linear-gradient(135deg, var(--bocket-secondary-500) 0%, var(--bocket-secondary-600) 50%, var(--bocket-secondary-700) 100%);
+  --bocket-gradient-success: linear-gradient(135deg, var(--bocket-success) 0%, #059669 100%);
+  --bocket-gradient-rainbow: linear-gradient(135deg, var(--bocket-primary-500) 0%, var(--bocket-secondary-500) 50%, var(--bocket-primary-600) 100%);
+  
+  // Efectos glassmorphism
+  --bocket-glass-light: rgba(255, 255, 255, 0.1);
+  --bocket-glass-medium: rgba(255, 255, 255, 0.15);
+  --bocket-glass-heavy: rgba(255, 255, 255, 0.25);
+  --bocket-backdrop-blur: blur(12px);
+  
+  // Efectos de hover mejorados
+  --bocket-hover-scale: scale(1.02);
+  --bocket-hover-scale-sm: scale(1.01);
+  --bocket-hover-lift: translateY(-2px);
+  --bocket-hover-lift-md: translateY(-4px);
+}
+
+// Tipografía profesional
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Clases utilitarias profesionales mejoradas
+.bocket-gradient-primary {
+  background: var(--bocket-gradient-primary);
+  color: white;
+}
+
+.bocket-gradient-secondary {
+  background: var(--bocket-gradient-secondary);
+  color: white;
+}
+
+.bocket-gradient-rainbow {
+  background: var(--bocket-gradient-rainbow);
+  color: white;
+}
+
+.bocket-glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: var(--bocket-backdrop-blur);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--bocket-shadow-lg);
+}
+
+.bocket-glass-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: var(--bocket-backdrop-blur);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.bocket-card-premium {
+  background: white;
+  border: 1px solid var(--bocket-gray-200);
+  border-radius: var(--bocket-radius-md);
+  box-shadow: var(--bocket-shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: var(--bocket-hover-lift);
+    box-shadow: var(--bocket-shadow-xl);
+    border-color: var(--bocket-primary-200);
+  }
+}
+
+.bocket-card-glass {
+  background: var(--bocket-glass-medium);
+  backdrop-filter: var(--bocket-backdrop-blur);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--bocket-radius-lg);
+  box-shadow: var(--bocket-shadow-lg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bocket-shadow-lg);
+    border-color: var(--bocket-primary-200);
+  }
+}
+
+.bocket-sidebar {
+  background: linear-gradient(180deg, var(--bocket-gray-900) 0%, var(--bocket-gray-800) 100%);
+  border-right: 1px solid var(--bocket-gray-700);
+}
+
+.bocket-header-premium {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--bocket-gray-200);
+  box-shadow: var(--bocket-shadow-sm);
+}
+
+.bocket-button-premium {
+  background: var(--bocket-primary-500);
+  color: white;
+  border: none;
+  border-radius: var(--bocket-radius);
+  padding: var(--bocket-space-3) var(--bocket-space-6);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--bocket-shadow);
+  
+  &:hover {
+    background: var(--bocket-primary-600);
+    transform: translateY(-1px);
+    box-shadow: var(--bocket-shadow-md);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.bocket-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--bocket-space-1) var(--bocket-space-3);
+  border-radius: var(--bocket-radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  
+  &.status-active {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--bocket-success);
+  }
+  
+  &.status-pending {
+    background: rgba(217, 119, 6, 0.1);
+    color: var(--bocket-warning);
+  }
+  
+  &.status-inactive {
+    background: var(--bocket-gray-100);
+    color: var(--bocket-gray-600);
+  }
+}
+
+// Animaciones profesionales
+@keyframes bocket-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bocket-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.bocket-animate-in {
+  animation: bocket-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bocket-slide-in {
+  animation: bocket-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Modo oscuro profesional
+body.theme-dark {
+  // Variables de Ionic para tema oscuro
+  --ion-background-color: #1a1a1a;
+  --ion-background-color-rgb: 26,26,26;
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255,255,255;
+  
+  --ion-card-background: #2a2a2a;
+  --ion-item-background: #2a2a2a;
+  --ion-toolbar-background: #2a2a2a;
+  
+  --ion-border-color: #3a3a3a;
+  --ion-item-border-color: #3a3a3a;
+  
+  // Colores de texto ajustados
+  --ion-text-color-step-50: #f2f2f2;
+  --ion-text-color-step-100: #e6e6e6;
+  --ion-text-color-step-150: #d9d9d9;
+  --ion-text-color-step-200: #cccccc;
+  --ion-text-color-step-250: #bfbfbf;
+  --ion-text-color-step-300: #b3b3b3;
+  --ion-text-color-step-350: #a6a6a6;
+  --ion-text-color-step-400: #999999;
+  --ion-text-color-step-450: #8c8c8c;
+  --ion-text-color-step-500: #808080;
+  --ion-text-color-step-550: #737373;
+  --ion-text-color-step-600: #666666;
+  --ion-text-color-step-650: #595959;
+  --ion-text-color-step-700: #4d4d4d;
+  --ion-text-color-step-750: #404040;
+  --ion-text-color-step-800: #333333;
+  --ion-text-color-step-850: #262626;
+  --ion-text-color-step-900: #1a1a1a;
+  --ion-text-color-step-950: #0d0d0d;
+  
+  // Overlays y modales
+  --ion-backdrop-color: rgba(0,0,0,0.7);
+  --ion-overlay-background-color: #2a2a2a;
+  --ion-placeholder-color: #666666;
+  
+  // Bocket variables para tema oscuro
+  --bocket-gray-50: #0f172a;
+  --bocket-gray-100: #1e293b;
+  --bocket-gray-200: #334155;
+  --bocket-gray-300: #475569;
+  --bocket-gray-400: #64748b;
+  --bocket-gray-500: #94a3b8;
+  --bocket-gray-600: #cbd5e1;
+  --bocket-gray-700: #e2e8f0;
+  --bocket-gray-800: #f1f5f9;
+  --bocket-gray-900: #f8fafc;
+  
+  // Sombras para tema oscuro
+  --bocket-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --bocket-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  --bocket-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --bocket-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --bocket-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  
+  // Componentes específicos
+  .bocket-card-premium {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
+    
+    &:hover {
+      border-color: var(--bocket-primary-400);
+    }
+  }
+  
+  .bocket-header-premium {
+    background: rgba(26, 26, 26, 0.98);
+    border-color: #3a3a3a;
+  }
+  
+  .bocket-glass {
+    background: rgba(42, 42, 42, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .bocket-button-premium {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+  }
+  
+  // Inputs y formularios
+  ion-input, ion-textarea, ion-select {
+    --background: #333333;
+    --border-color: #444444;
+    
+    &:focus {
+      --border-color: var(--ion-color-primary);
+    }
+  }
+  
+  // Tablas y listas
+  ion-list {
+    --ion-item-background: #2a2a2a;
+  }
+  
+  ion-item {
+    --border-color: #3a3a3a;
+    
+    &:hover {
+      --background: #333333;
+    }
+  }
+  
+  // Searchbar
+  ion-searchbar {
+    --background: #333333;
+    --placeholder-color: #666666;
+    --icon-color: #999999;
+    --color: #ffffff;
+  }
+  
+  // Chips y badges
+  ion-chip {
+    --background: rgba(255, 255, 255, 0.1);
+  }
+  
+  ion-badge {
+    --background: rgba(255, 255, 255, 0.2);
+  }
+  
+  // Gráficos
+  .chart-canvas {
+    filter: brightness(0.9);
+  }
+}
+
+// Soporte para preferencia del sistema
+@media (prefers-color-scheme: dark) {
+  body:not(.theme-light) {
+    // Copiar las mismas propiedades del tema oscuro
+    --ion-background-color: #1a1a1a;
+    --ion-background-color-rgb: 26,26,26;
+    --ion-text-color: #ffffff;
+    --ion-text-color-rgb: 255,255,255;
+    
+    --ion-card-background: #2a2a2a;
+    --ion-item-background: #2a2a2a;
+    --ion-toolbar-background: #2a2a2a;
+    
+    --ion-border-color: #3a3a3a;
+    --ion-item-border-color: #3a3a3a;
+  }
+}

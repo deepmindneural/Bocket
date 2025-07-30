@@ -1,0 +1,321 @@
+<div class="formulario-container">
+  <!-- Header del formulario -->
+  <div class="formulario-header">
+    <div class="header-left">
+      <button class="btn-back" (click)="cancelar()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <div class="header-info">
+        <h2 class="form-title">
+          <ion-icon name="person-add" *ngIf="!esEdicion"></ion-icon>
+          <ion-icon name="create" *ngIf="esEdicion"></ion-icon>
+          {{esEdicion ? 'Editar Cliente' : 'Nuevo Cliente'}}
+        </h2>
+        <p class="form-subtitle" *ngIf="!esEdicion">Registra un nuevo cliente</p>
+        <p class="form-subtitle" *ngIf="esEdicion">Actualiza la información del cliente</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="cancelar()" [disabled]="guardando">
+        Cancelar
+      </button>
+      <button 
+        class="btn-primary" 
+        (click)="guardarCliente()" 
+        [disabled]="formularioCliente.invalid || guardando">
+        <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+        <ion-icon name="save" *ngIf="!guardando"></ion-icon>
+        {{guardando ? 'Guardando...' : 'Guardar Cliente'}}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="cargando" class="loading-container">
+    <div class="loading-spinner">
+      <ion-icon name="sync" class="spin"></ion-icon>
+      <p>Cargando información del cliente...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error" class="error-container">
+    <ion-icon name="alert-circle"></ion-icon>
+    <p>{{error}}</p>
+  </div>
+
+  <!-- Formulario principal -->
+  <form *ngIf="!cargando" [formGroup]="formularioCliente" class="cliente-form">
+    
+    <!-- Sección: Información Básica -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="person"></ion-icon>
+          Información Básica
+        </h3>
+        <span class="section-subtitle">Datos principales del cliente</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Nombre completo -->
+        <div class="form-group span-2">
+          <label class="form-label required">Nombre Completo</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="nombre"
+            placeholder="Ej: Carlos Andrés Rodríguez"
+            [class.error]="esCampoInvalido('nombre')">
+          <div class="form-error" *ngIf="esCampoInvalido('nombre')">
+            {{obtenerMensajeError('nombre')}}
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label required">Email</label>
+          <input 
+            type="email" 
+            class="form-input"
+            formControlName="email"
+            placeholder="ejemplo@correo.com"
+            (blur)="validarEmail()"
+            [class.error]="esCampoInvalido('email')">
+          <div class="form-error" *ngIf="esCampoInvalido('email')">
+            {{obtenerMensajeError('email')}}
+          </div>
+        </div>
+
+        <!-- Teléfono -->
+        <div class="form-group">
+          <label class="form-label required">Teléfono</label>
+          <input 
+            type="tel" 
+            class="form-input"
+            formControlName="telefono"
+            placeholder="+57 300 123 4567"
+            (blur)="formatearTelefono()"
+            [class.error]="esCampoInvalido('telefono')">
+          <div class="form-error" *ngIf="esCampoInvalido('telefono')">
+            {{obtenerMensajeError('telefono')}}
+          </div>
+        </div>
+
+        <!-- Cédula -->
+        <div class="form-group">
+          <label class="form-label">Cédula</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="cedula"
+            placeholder="12345678"
+            [class.error]="esCampoInvalido('cedula')">
+          <div class="form-error" *ngIf="esCampoInvalido('cedula')">
+            {{obtenerMensajeError('cedula')}}
+          </div>
+        </div>
+
+        <!-- Fecha de nacimiento -->
+        <div class="form-group">
+          <label class="form-label">Fecha de Nacimiento</label>
+          <input 
+            type="date" 
+            class="form-input"
+            formControlName="fechaNacimiento">
+          <div class="form-help" *ngIf="calcularEdad()">
+            Edad: {{calcularEdad()}} años
+          </div>
+        </div>
+
+        <!-- Género -->
+        <div class="form-group">
+          <label class="form-label">Género</label>
+          <select class="form-input" formControlName="genero">
+            <option value="">Seleccionar...</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Otro</option>
+            <option value="prefiero_no_decir">Prefiero no decir</option>
+          </select>
+        </div>
+
+        <!-- Tipo de cliente -->
+        <div class="form-group">
+          <label class="form-label required">Tipo de Cliente</label>
+          <select class="form-input" formControlName="tipoCliente" [class.error]="esCampoInvalido('tipoCliente')">
+            <option *ngFor="let tipo of tiposSource" [value]="tipo.value">
+              {{tipo.label}}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Dirección -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="location"></ion-icon>
+          Dirección
+        </h3>
+        <span class="section-subtitle">Información de ubicación</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Dirección -->
+        <div class="form-group span-2">
+          <label class="form-label">Dirección</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="direccion"
+            placeholder="Calle 123 #45-67, Apto 101">
+        </div>
+
+        <!-- Ciudad -->
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <select class="form-input" formControlName="ciudad">
+            <option value="">Seleccionar ciudad...</option>
+            <option value="Bogotá">Bogotá</option>
+            <option value="Medellín">Medellín</option>
+            <option value="Cali">Cali</option>
+          </select>
+        </div>
+
+        <!-- Código postal -->
+        <div class="form-group">
+          <label class="form-label">Código Postal</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="codigoPostal"
+            placeholder="110111">
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Información Comercial -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="business"></ion-icon>
+          Información Comercial
+        </h3>
+        <span class="section-subtitle">Datos empresariales (opcional)</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Empresa -->
+        <div class="form-group">
+          <label class="form-label">Empresa</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="empresa"
+            placeholder="Nombre de la empresa">
+        </div>
+
+        <!-- Cargo -->
+        <div class="form-group">
+          <label class="form-label">Cargo</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="cargo"
+            placeholder="Gerente, Director, etc.">
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Configuración -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="settings"></ion-icon>
+          Configuración
+        </h3>
+        <span class="section-subtitle">Preferencias del cliente</span>
+      </div>
+
+      <div class="form-switches">
+        <!-- Cliente activo -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Cliente Activo</label>
+            <span class="switch-description">El cliente puede realizar pedidos y reservas</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="activo">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Recibir promociones -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Recibir Promociones</label>
+            <span class="switch-description">Enviar ofertas especiales y descuentos por email</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="recibirPromociones">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Recibir notificaciones -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Recibir Notificaciones</label>
+            <span class="switch-description">Notificaciones sobre estado de pedidos y reservas</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="recibirNotificaciones">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Notas -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="document-text"></ion-icon>
+          Notas Adicionales
+        </h3>
+        <span class="section-subtitle">Información adicional sobre el cliente</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <textarea 
+          class="form-textarea"
+          formControlName="notas"
+          rows="4"
+          placeholder="Preferencias alimentarias, alergias, comentarios especiales, etc.">
+        </textarea>
+      </div>
+    </div>
+
+    <!-- Botones de acción fijos -->
+    <div class="form-actions-sticky">
+      <div class="actions-container">
+        <button type="button" class="btn-secondary-large" (click)="cancelar()" [disabled]="guardando">
+          <ion-icon name="close"></ion-icon>
+          Cancelar
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary-large" 
+          (click)="guardarCliente()" 
+          [disabled]="formularioCliente.invalid || guardando">
+          <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+          <ion-icon name="checkmark" *ngIf="!guardando"></ion-icon>
+          {{guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Cliente' : 'Crear Cliente')}}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

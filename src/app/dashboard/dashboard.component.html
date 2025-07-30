@@ -1,0 +1,202 @@
+<div class="dashboard-container bocket-animate-in">
+  <!-- Métricas principales -->
+  <div class="metrics-grid">
+    <div class="metric-card bocket-card-premium">
+      <div class="metric-header">
+        <div class="metric-icon primary">
+          <ion-icon name="people"></ion-icon>
+        </div>
+        <div class="metric-trend positive">
+          <ion-icon name="trending-up"></ion-icon>
+          <span>+12%</span>
+        </div>
+      </div>
+      <div class="metric-content">
+        <h3 class="metric-value">{{totalClientes}}</h3>
+        <p class="metric-label">Total Clientes</p>
+        <div class="metric-sublabel">
+          <span class="new-clients">+{{nuevosClientesMes}} este mes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metric-card bocket-card-premium">
+      <div class="metric-header">
+        <div class="metric-icon secondary">
+          <ion-icon name="calendar"></ion-icon>
+        </div>
+        <div class="metric-trend positive">
+          <ion-icon name="trending-up"></ion-icon>
+          <span>+8%</span>
+        </div>
+      </div>
+      <div class="metric-content">
+        <h3 class="metric-value">{{reservasHoy}}</h3>
+        <p class="metric-label">Reservas Hoy</p>
+        <div class="metric-sublabel">
+          <span class="pending-reservations">{{reservasPendientes}} pendientes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metric-card bocket-card-premium">
+      <div class="metric-header">
+        <div class="metric-icon success">
+          <ion-icon name="card"></ion-icon>
+        </div>
+        <div class="metric-trend positive">
+          <ion-icon name="trending-up"></ion-icon>
+          <span>+15%</span>
+        </div>
+      </div>
+      <div class="metric-content">
+        <h3 class="metric-value">{{ventasHoy | monedaColombiana}}</h3>
+        <p class="metric-label">Ventas Hoy</p>
+        <div class="metric-sublabel">
+          <span class="target-progress">{{progresoMeta}}% de la meta</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metric-card bocket-card-premium">
+      <div class="metric-header">
+        <div class="metric-icon warning">
+          <ion-icon name="receipt"></ion-icon>
+        </div>
+        <div class="metric-trend positive">
+          <ion-icon name="trending-up"></ion-icon>
+          <span>+5%</span>
+        </div>
+      </div>
+      <div class="metric-content">
+        <h3 class="metric-value">{{pedidosActivos}}</h3>
+        <p class="metric-label">Pedidos Activos</p>
+        <div class="metric-sublabel">
+          <span class="processing-orders">{{pedidosEnPreparacion}} en preparación</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos y widgets -->
+  <div class="charts-grid">
+    <!-- Gráfico de ventas -->
+    <div class="chart-widget bocket-card-premium">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Ventas del Mes</h3>
+          <p>Comparación con el mes anterior</p>
+        </div>
+        <div class="widget-actions">
+          <button class="action-btn">
+            <ion-icon name="download"></ion-icon>
+          </button>
+          <button class="action-btn">
+            <ion-icon name="ellipsis-horizontal"></ion-icon>
+          </button>
+        </div>
+      </div>
+      <div class="widget-content">
+        <canvas #ventasChart class="chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Reservas por día -->
+    <div class="chart-widget bocket-card-premium">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Reservas Semanales</h3>
+          <p>Distribución por día de la semana</p>
+        </div>
+      </div>
+      <div class="widget-content">
+        <canvas #reservasChart class="chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Top productos -->
+    <div class="widget bocket-card-premium">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Productos Más Vendidos</h3>
+          <p>Esta semana</p>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="top-products-list">
+          <div class="product-item" *ngFor="let producto of topProductos; let i = index">
+            <div class="product-rank">{{i + 1}}</div>
+            <div class="product-info">
+              <h4>{{producto.nombre}}</h4>
+              <p>{{producto.categoria}}</p>
+            </div>
+            <div class="product-stats">
+              <div class="product-sales">{{producto.ventas}} vendidos</div>
+              <div class="product-revenue">${{producto.ingresos | number:'1.0-0'}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actividad reciente -->
+    <div class="widget bocket-card-premium">
+      <div class="widget-header">
+        <div class="widget-title">
+          <h3>Actividad Reciente</h3>
+          <p>Últimas acciones del sistema</p>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="activity-feed">
+          <div class="activity-item" *ngFor="let actividad of actividadReciente">
+            <div class="activity-icon" [ngClass]="actividad.tipo">
+              <ion-icon [name]="actividad.icono"></ion-icon>
+            </div>
+            <div class="activity-content">
+              <p class="activity-text">{{actividad.descripcion}}</p>
+              <span class="activity-time">{{actividad.tiempo}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones rápidas -->
+  <div class="quick-actions">
+    <h3>Acciones Rápidas</h3>
+    <div class="actions-grid">
+      <button class="quick-action-btn" (click)="nuevaReserva()">
+        <div class="action-icon">
+          <ion-icon name="add-circle"></ion-icon>
+        </div>
+        <span>Nueva Reserva</span>
+      </button>
+      <button class="quick-action-btn" (click)="nuevoPedido()">
+        <div class="action-icon">
+          <ion-icon name="receipt"></ion-icon>
+        </div>
+        <span>Nuevo Pedido</span>
+      </button>
+      <button class="quick-action-btn" (click)="nuevoCliente()">
+        <div class="action-icon">
+          <ion-icon name="person-add"></ion-icon>
+        </div>
+        <span>Nuevo Cliente</span>
+      </button>
+      <button class="quick-action-btn" (click)="verReportes()">
+        <div class="action-icon">
+          <ion-icon name="bar-chart"></ion-icon>
+        </div>
+        <span>Ver Reportes</span>
+      </button>
+      <button class="quick-action-btn" (click)="irAdAdmin()" style="background-color: #e74c3c;">
+        <div class="action-icon">
+          <ion-icon name="settings"></ion-icon>
+        </div>
+        <span>Admin Backend</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,196 @@
+// Reutilizar estilos del componente de clientes con ajustes específicos para reservas
+.reservas-page {
+  padding: var(--bocket-space-6);
+  background: var(--bocket-gray-50);
+  min-height: 100vh;
+
+  @media (max-width: 768px) {
+    padding: var(--bocket-space-4);
+  }
+}
+
+.page-header {
+  margin-bottom: var(--bocket-space-6);
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: var(--bocket-space-4);
+    }
+  }
+
+  .header-info {
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--bocket-gray-900);
+      margin: 0 0 var(--bocket-space-2) 0;
+    }
+
+    p {
+      color: var(--bocket-gray-600);
+      margin: 0;
+      font-size: 16px;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: var(--bocket-space-3);
+  }
+}
+
+.filtros-section {
+  margin-bottom: var(--bocket-space-6);
+  padding: var(--bocket-space-6);
+
+  .filtros-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bocket-space-4);
+  }
+
+  .busqueda-container {
+    .searchbar-professional {
+      --background: var(--bocket-gray-50);
+      --border-radius: var(--bocket-radius-md);
+      --box-shadow: none;
+      --color: var(--bocket-gray-900);
+      --placeholder-color: var(--bocket-gray-500);
+    }
+  }
+
+  .filtros-avanzados {
+    ion-segment {
+      --background: var(--bocket-gray-100);
+      --color-checked: var(--bocket-primary-500);
+      border-radius: var(--bocket-radius-md);
+    }
+  }
+}
+
+.reservas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: var(--bocket-space-6);
+  margin-bottom: var(--bocket-space-8);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: var(--bocket-space-4);
+  }
+}
+
+.reserva-card {
+  padding: var(--bocket-space-6);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--bocket-shadow-xl);
+  }
+
+  .reserva-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--bocket-space-4);
+
+    .reserva-info {
+      h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--bocket-gray-900);
+        margin: 0 0 var(--bocket-space-1) 0;
+      }
+
+      p {
+        color: var(--bocket-gray-600);
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+
+    .reserva-estado {
+      .bocket-chip {
+        &.status-pendiente {
+          background: rgba(245, 158, 11, 0.1);
+          color: var(--bocket-warning);
+        }
+
+        &.status-confirmada {
+          background: rgba(5, 150, 105, 0.1);
+          color: var(--bocket-success);
+        }
+
+        &.status-cancelada {
+          background: rgba(220, 38, 38, 0.1);
+          color: var(--bocket-error);
+        }
+      }
+    }
+  }
+
+  .reserva-detalles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bocket-space-2);
+    margin-bottom: var(--bocket-space-4);
+
+    .detalle-item {
+      display: flex;
+      align-items: center;
+      gap: var(--bocket-space-2);
+      font-size: 14px;
+      color: var(--bocket-gray-600);
+
+      ion-icon {
+        font-size: 16px;
+        color: var(--bocket-primary-500);
+      }
+    }
+  }
+
+  .reserva-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--bocket-space-2);
+    padding-top: var(--bocket-space-4);
+    border-top: 1px solid var(--bocket-gray-200);
+
+    ion-button {
+      --padding-start: 8px;
+      --padding-end: 8px;
+    }
+  }
+}
+
+.estado-vacio {
+  text-align: center;
+  padding: var(--bocket-space-12) var(--bocket-space-6);
+
+  .vacio-icon {
+    ion-icon {
+      font-size: 64px;
+      color: var(--bocket-gray-400);
+      margin-bottom: var(--bocket-space-4);
+    }
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--bocket-gray-700);
+    margin: 0 0 var(--bocket-space-2) 0;
+  }
+
+  p {
+    color: var(--bocket-gray-500);
+    margin: 0 0 var(--bocket-space-6) 0;
+  }
+}

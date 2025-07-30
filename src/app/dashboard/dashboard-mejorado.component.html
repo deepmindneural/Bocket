@@ -1,0 +1,250 @@
+<ion-content class="dashboard-content">
+  <!-- Header con estadísticas principales -->
+  <div class="dashboard-header">
+    <div class="header-top">
+      <div class="header-info">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <p class="dashboard-subtitle">{{ restauranteActual?.nombre || 'Mi Restaurante' }}</p>
+      </div>
+      <div class="header-actions">
+        <ion-button fill="clear" (click)="cargarDatos()" [disabled]="cargando" class="action-btn refresh-btn">
+          <ion-icon name="refresh-outline" [class.spinning]="cargando"></ion-icon>
+          <span *ngIf="!cargando">Actualizar</span>
+          <span *ngIf="cargando">Cargando...</span>
+        </ion-button>
+        <ion-button fill="clear" (click)="irAdAdmin()" class="action-btn admin-btn">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <span>Admin</span>
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="stats-grid">
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <div class="stat-icon-wrapper primary">
+              <ion-icon name="people"></ion-icon>
+            </div>
+            <div class="stat-change" [class.positive]="stats.clientesNuevos > 0">
+              <ion-icon [name]="stats.clientesNuevos > 0 ? 'trending-up' : 'trending-down'"></ion-icon>
+              <span>{{ stats.clientesNuevos }}%</span>
+            </div>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-value">{{ stats.clientesTotal }}</h3>
+            <p class="stat-label">Clientes Totales</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <div class="stat-icon-wrapper secondary">
+              <ion-icon name="receipt"></ion-icon>
+            </div>
+            <div class="stat-change positive" *ngIf="stats.pedidosActivos > 0">
+              <ion-icon name="pulse"></ion-icon>
+              <span>{{ stats.pedidosActivos }} activos</span>
+            </div>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-value">{{ stats.pedidosHoy }}</h3>
+            <p class="stat-label">Pedidos Hoy</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <div class="stat-icon-wrapper tertiary">
+              <ion-icon name="calendar"></ion-icon>
+            </div>
+            <div class="stat-change" *ngIf="stats.reservasPendientes > 0">
+              <ion-icon name="time"></ion-icon>
+              <span>{{ stats.reservasPendientes }} pendientes</span>
+            </div>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-value">{{ stats.reservasHoy }}</h3>
+            <p class="stat-label">Reservas Hoy</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <div class="stat-icon-wrapper success">
+              <ion-icon name="cash"></ion-icon>
+            </div>
+            <div class="stat-change positive">
+              <ion-icon name="trending-up"></ion-icon>
+              <span>+18%</span>
+            </div>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-value">{{ formatearMoneda(stats.ventasMes) }}</h3>
+            <p class="stat-label">Ventas del Mes</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="stat-card">
+        <ion-card-content>
+          <div class="stat-header">
+            <div class="stat-icon-wrapper warning">
+              <ion-icon name="flash"></ion-icon>
+            </div>
+            <div class="stat-change positive" *ngIf="stats.pedidosActivos > 0">
+              <ion-icon name="pulse"></ion-icon>
+              <span>En vivo</span>
+            </div>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-value">{{ stats.pedidosActivos || 0 }}</h3>
+            <p class="stat-label">Pedidos Activos</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Acciones rápidas -->
+  <div class="quick-actions">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Acciones Rápidas</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="actions-grid">
+          <ion-button expand="block" fill="outline" (click)="nuevoPedido()">
+            <ion-icon slot="start" name="add-circle"></ion-icon>
+            Nuevo Pedido
+          </ion-button>
+          <ion-button expand="block" fill="outline" (click)="nuevaReserva()">
+            <ion-icon slot="start" name="calendar-outline"></ion-icon>
+            Nueva Reserva
+          </ion-button>
+          <ion-button expand="block" fill="outline" (click)="nuevoCliente()">
+            <ion-icon slot="start" name="person-add"></ion-icon>
+            Nuevo Cliente
+          </ion-button>
+          <ion-button expand="block" fill="outline" (click)="verReportes()">
+            <ion-icon slot="start" name="analytics"></ion-icon>
+            Ver Reportes
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="charts-section">
+    <!-- Gráfico de ventas -->
+    <ion-card class="chart-card">
+      <ion-card-header>
+        <ion-card-title>Ventas Últimos 7 Días</ion-card-title>
+        <ion-card-subtitle>
+          Total: {{ formatearMoneda(calcularTotalVentas()) }}
+        </ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="chart-container" *ngIf="!cargando">
+          <canvas #ventasChart></canvas>
+        </div>
+        <div class="chart-loading" *ngIf="cargando">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Cargando datos...</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Gráfico de reservas -->
+    <ion-card class="chart-card">
+      <ion-card-header>
+        <ion-card-title>Reservas por Día</ion-card-title>
+        <ion-card-subtitle>Distribución semanal</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="chart-container" *ngIf="!cargando">
+          <canvas #reservasChart></canvas>
+        </div>
+        <div class="chart-loading" *ngIf="cargando">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Cargando datos...</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Segunda fila de gráficos -->
+  <div class="charts-section">
+    <!-- Distribución de pedidos -->
+    <ion-card class="chart-card">
+      <ion-card-header>
+        <ion-card-title>Distribución de Pedidos</ion-card-title>
+        <ion-card-subtitle>Por tipo de servicio</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="chart-container doughnut" *ngIf="!cargando && distribucionPedidos.length > 0">
+          <canvas #pedidosChart></canvas>
+        </div>
+        <div class="chart-loading" *ngIf="cargando || distribucionPedidos.length === 0">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Cargando datos...</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Productos más vendidos -->
+    <ion-card class="chart-card">
+      <ion-card-header>
+        <ion-card-title>Top 5 Productos</ion-card-title>
+        <ion-card-subtitle>Más vendidos del mes</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="chart-container" *ngIf="!cargando && productosTop.length > 0">
+          <canvas #productosChart></canvas>
+        </div>
+        <div class="chart-loading" *ngIf="cargando || productosTop.length === 0">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Cargando datos...</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Actividad reciente -->
+  <ion-card class="activity-card">
+    <ion-card-header>
+      <ion-card-title>Actividad Reciente</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list lines="none" *ngIf="actividadReciente.length > 0">
+        <ion-item *ngFor="let actividad of actividadReciente">
+          <ion-icon [name]="actividad.icono" slot="start" [color]="actividad.tipo"></ion-icon>
+          <ion-label>
+            <h3>{{ actividad.descripcion }}</h3>
+            <p>{{ actividad.tiempo }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+      <div class="no-activity" *ngIf="actividadReciente.length === 0 && !cargando">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <p>No hay actividad reciente</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Mensaje de error -->
+  <ion-card *ngIf="error" color="danger">
+    <ion-card-content>
+      <ion-icon name="alert-circle"></ion-icon>
+      {{ error }}
+    </ion-card-content>
+  </ion-card>
+</ion-content>

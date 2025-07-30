@@ -1,0 +1,562 @@
+<div class="formulario-container">
+  <!-- Header del formulario -->
+  <div class="formulario-header">
+    <div class="header-left">
+      <button class="btn-back" (click)="cancelar()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <div class="header-info">
+        <h2 class="form-title">
+          <ion-icon name="person-add" *ngIf="!esEdicion"></ion-icon>
+          <ion-icon name="create" *ngIf="esEdicion"></ion-icon>
+          {{esEdicion ? 'Editar Cliente' : 'Nuevo Cliente'}}
+        </h2>
+        <p class="form-subtitle" *ngIf="!esEdicion">Registra un nuevo cliente con información completa de WhatsApp</p>
+        <p class="form-subtitle" *ngIf="esEdicion">Actualiza la información completa del cliente</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="cancelar()" [disabled]="guardando">
+        Cancelar
+      </button>
+      <button 
+        class="btn-primary" 
+        (click)="guardarCliente()" 
+        [disabled]="formularioCliente.invalid || guardando">
+        <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+        <ion-icon name="save" *ngIf="!guardando"></ion-icon>
+        {{guardando ? 'Guardando...' : 'Guardar Cliente'}}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="cargando" class="loading-container">
+    <div class="loading-spinner">
+      <ion-icon name="sync" class="spin"></ion-icon>
+      <p>Cargando información del cliente...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error" class="error-container">
+    <ion-icon name="alert-circle"></ion-icon>
+    <p>{{error}}</p>
+  </div>
+
+  <!-- Formulario principal -->
+  <form *ngIf="!cargando" [formGroup]="formularioCliente" class="cliente-form">
+    
+    <!-- Sección: Información WhatsApp -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="logo-whatsapp"></ion-icon>
+          Información WhatsApp
+        </h3>
+        <span class="section-subtitle">Datos del contacto de WhatsApp (finalUser)</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- ID (número WhatsApp) -->
+        <div class="form-group">
+          <label class="form-label required">Número WhatsApp (ID)</label>
+          <input 
+            type="tel" 
+            class="form-input"
+            formControlName="id"
+            placeholder="573001234567"
+            (input)="onIdChange()"
+            [class.error]="esCampoInvalido('id')">
+          <div class="form-help">Número de WhatsApp sin espacios ni símbolos</div>
+          <div class="form-error" *ngIf="esCampoInvalido('id')">
+            {{obtenerMensajeError('id')}}
+          </div>
+        </div>
+
+        <!-- Nombre principal -->
+        <div class="form-group">
+          <label class="form-label required">Nombre Completo</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="name"
+            placeholder="Pedro Martínez García"
+            (blur)="actualizarNombresDinamicos()"
+            [class.error]="esCampoInvalido('name')">
+          <div class="form-error" *ngIf="esCampoInvalido('name')">
+            {{obtenerMensajeError('name')}}
+          </div>
+        </div>
+
+        <!-- Nombre de WhatsApp -->
+        <div class="form-group">
+          <label class="form-label">Nombre en WhatsApp</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="whatsAppName"
+            placeholder="Pedro Martínez">
+          <div class="form-help">Nombre que aparece en WhatsApp</div>
+        </div>
+
+        <!-- Nombre público (pushname) -->
+        <div class="form-group">
+          <label class="form-label">Nombre Público</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="pushname"
+            placeholder="Pedro M.">
+          <div class="form-help">Nombre configurado públicamente</div>
+        </div>
+
+        <!-- Nombre corto -->
+        <div class="form-group">
+          <label class="form-label">Nombre Corto</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="shortName"
+            placeholder="Pedro">
+          <div class="form-help">Versión abreviada del nombre</div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input 
+            type="email" 
+            class="form-input"
+            formControlName="email"
+            placeholder="pedro@email.com"
+            [class.error]="esCampoInvalido('email')">
+          <div class="form-error" *ngIf="esCampoInvalido('email')">
+            {{obtenerMensajeError('email')}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Configuración de Contacto -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="settings"></ion-icon>
+          Configuración de Contacto
+        </h3>
+        <span class="section-subtitle">Configuración del comportamiento y origen</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Origen del contacto -->
+        <div class="form-group">
+          <label class="form-label required">Origen del Contacto</label>
+          <select class="form-input" formControlName="sourceType" (change)="onSourceTypeChange()" [class.error]="esCampoInvalido('sourceType')">
+            <option value="">Seleccionar origen...</option>
+            <option value="chatBot">Chat Bot</option>
+            <option value="manual">Manual</option>
+            <option value="api">API</option>
+          </select>
+          <div class="form-help">Cómo se creó este contacto</div>
+        </div>
+
+        <!-- Tipo de respuesta -->
+        <div class="form-group">
+          <label class="form-label required">Modo de Respuesta</label>
+          <select class="form-input" formControlName="respType" [class.error]="esCampoInvalido('respType')">
+            <option value="">Seleccionar modo...</option>
+            <option value="bot">Bot Automático</option>
+            <option value="manual">Manual</option>
+            <option value="manualTemp">Manual Temporal</option>
+          </select>
+          <div class="form-help">Cómo responder a este cliente</div>
+        </div>
+
+        <!-- Etiquetas -->
+        <div class="form-group span-2">
+          <label class="form-label">Etiquetas</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="labels"
+            placeholder="cliente_vip,frecuente,eventos">
+          <div class="form-help">Etiquetas separadas por comas</div>
+          
+          <!-- Botones de presets -->
+          <div class="preset-buttons">
+            <button type="button" class="btn-preset vip" (click)="aplicarPresetVIP()">
+              <ion-icon name="star"></ion-icon>
+              Preset VIP
+            </button>
+            <button type="button" class="btn-preset corporativo" (click)="aplicarPresetCorporativo()">
+              <ion-icon name="business"></ion-icon>
+              Preset Corporativo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Estados de WhatsApp -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="checkmark-circle"></ion-icon>
+          Estados de WhatsApp
+        </h3>
+        <span class="section-subtitle">Configuración de estados y permisos</span>
+      </div>
+
+      <div class="form-switches">
+        <!-- Es grupo -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Es Grupo</label>
+            <span class="switch-description">El contacto es un grupo de WhatsApp</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isGroup">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Es contacto empresarial -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Contacto Empresarial</label>
+            <span class="switch-description">Es un contacto de empresa</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isEnterprise">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Es negocio -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Es Negocio</label>
+            <span class="switch-description">Cuenta de WhatsApp Business</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isBusiness">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Está en mis contactos -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">En Mis Contactos</label>
+            <span class="switch-description">Guardado en contactos del teléfono</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isMyContact">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Es usuario -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Es Usuario</label>
+            <span class="switch-description">Es un contacto de usuario</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isUser">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Tiene WhatsApp -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Registrado en WhatsApp</label>
+            <span class="switch-description">El número está registrado en WhatsApp</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isWAContact">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Está bloqueado -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Bloqueado</label>
+            <span class="switch-description">Contacto bloqueado</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isBlocked">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Es spam -->
+        <div class="switch-group">
+          <div class="switch-info">
+            <label class="switch-label">Marcado como Spam</label>
+            <span class="switch-description">No desea recibir más mensajes de campaña</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" formControlName="isSpam">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Información Comercial -->
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="business"></ion-icon>
+          Información Comercial
+        </h3>
+        <span class="section-subtitle">Datos empresariales y de contacto</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Empresa -->
+        <div class="form-group">
+          <label class="form-label">Empresa</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="company"
+            placeholder="Nombre de la empresa">
+        </div>
+
+        <!-- Dirección -->
+        <div class="form-group">
+          <label class="form-label">Dirección</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="address"
+            placeholder="Calle 123 #45-67, Oficina 801">
+        </div>
+
+        <!-- Imagen de perfil -->
+        <div class="form-group span-2">
+          <label class="form-label">URL Imagen de Perfil</label>
+          <input 
+            type="url" 
+            class="form-input"
+            formControlName="image"
+            placeholder="https://example.com/profile/image.jpg">
+          <div class="form-help">URL de la imagen de perfil de WhatsApp</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Estadísticas de Interacciones -->
+    <div class="form-section" *ngIf="esEdicion">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="analytics"></ion-icon>
+          Estadísticas de Interacciones
+        </h3>
+        <span class="section-subtitle">UserInteractions - Historial de actividad</span>
+      </div>
+
+      <div class="stats-grid" formGroupName="userInteractions">
+        <!-- WhatsApp -->
+        <div class="stat-card">
+          <div class="stat-icon whatsapp">
+            <ion-icon name="logo-whatsapp"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">WhatsApp</label>
+            <input type="number" class="stat-input" formControlName="whatsapp" readonly>
+          </div>
+        </div>
+
+        <!-- Controller -->
+        <div class="stat-card">
+          <div class="stat-icon controller">
+            <ion-icon name="person"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Controller</label>
+            <input type="number" class="stat-input" formControlName="controller" readonly>
+          </div>
+        </div>
+
+        <!-- Chatbot -->
+        <div class="stat-card">
+          <div class="stat-icon chatbot">
+            <ion-icon name="chatbubble-ellipses"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Chatbot</label>
+            <input type="number" class="stat-input" formControlName="chatbot" readonly>
+          </div>
+        </div>
+
+        <!-- API -->
+        <div class="stat-card">
+          <div class="stat-icon api">
+            <ion-icon name="code"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">API</label>
+            <input type="number" class="stat-input" formControlName="api" readonly>
+          </div>
+        </div>
+
+        <!-- Campaign -->
+        <div class="stat-card">
+          <div class="stat-icon campaign">
+            <ion-icon name="megaphone"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Campañas</label>
+            <input type="number" class="stat-input" formControlName="campaing" readonly>
+          </div>
+        </div>
+
+        <!-- Client -->
+        <div class="stat-card">
+          <div class="stat-icon client">
+            <ion-icon name="person-circle"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Cliente</label>
+            <input type="number" class="stat-input" formControlName="client" readonly>
+          </div>
+        </div>
+
+        <!-- Others -->
+        <div class="stat-card">
+          <div class="stat-icon others">
+            <ion-icon name="ellipsis-horizontal"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Otros</label>
+            <input type="number" class="stat-input" formControlName="others" readonly>
+          </div>
+        </div>
+
+        <!-- WappController -->
+        <div class="stat-card">
+          <div class="stat-icon wapp-controller">
+            <ion-icon name="desktop"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Wapp Controller</label>
+            <input type="number" class="stat-input" formControlName="wappController" readonly>
+          </div>
+        </div>
+
+        <!-- AI -->
+        <div class="stat-card">
+          <div class="stat-icon ai">
+            <ion-icon name="sparkles"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">IA</label>
+            <input type="number" class="stat-input" formControlName="ai" readonly>
+          </div>
+        </div>
+
+        <!-- Fee (total gastado) -->
+        <div class="stat-card fee-card">
+          <div class="stat-icon fee">
+            <ion-icon name="cash"></ion-icon>
+          </div>
+          <div class="stat-content">
+            <label class="stat-label">Total Gastado</label>
+            <div class="fee-amount">
+              ${{(formularioCliente.get('userInteractions.fee')?.value || 0) | currency:'COP':'symbol':'1.0-0'}}
+            </div>
+            <input type="number" class="stat-input" formControlName="fee" readonly style="display: none;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen de estadísticas -->
+      <div class="stats-summary">
+        <div class="summary-item">
+          <span class="summary-label">Total Interacciones:</span>
+          <span class="summary-value">{{calcularTotalInteracciones()}}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Último Update:</span>
+          <span class="summary-value">{{formularioCliente.get('lastUpdate')?.value | date:'short'}}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Fecha Creación:</span>
+          <span class="summary-value">{{formularioCliente.get('creation')?.value | date:'short'}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección: Campos Técnicos (solo para desarrollo) -->
+    <div class="form-section" *ngIf="mostrarCamposTecnicos">
+      <div class="section-header">
+        <h3 class="section-title">
+          <ion-icon name="code"></ion-icon>
+          Campos Técnicos
+        </h3>
+        <span class="section-subtitle">Información técnica del sistema</span>
+      </div>
+
+      <div class="form-grid">
+        <!-- Section Header -->
+        <div class="form-group">
+          <label class="form-label">Section Header</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="sectionHeader"
+            placeholder="Header de sección">
+        </div>
+
+        <!-- Fecha de creación -->
+        <div class="form-group">
+          <label class="form-label">Fecha Creación</label>
+          <input 
+            type="datetime-local" 
+            class="form-input"
+            formControlName="creation"
+            readonly>
+        </div>
+
+        <!-- Última actualización -->
+        <div class="form-group span-2">
+          <label class="form-label">Última Actualización</label>
+          <input 
+            type="text" 
+            class="form-input"
+            formControlName="lastUpdate"
+            readonly>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de acción fijos -->
+    <div class="form-actions-sticky">
+      <div class="actions-container">
+        <button type="button" class="btn-secondary-large" (click)="cancelar()" [disabled]="guardando">
+          <ion-icon name="close"></ion-icon>
+          Cancelar
+        </button>
+        <button type="button" class="btn-technical" (click)="toggleCamposTecnicos()">
+          <ion-icon name="code"></ion-icon>
+          {{mostrarCamposTecnicos ? 'Ocultar' : 'Mostrar'}} Técnicos
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary-large" 
+          (click)="guardarCliente()" 
+          [disabled]="formularioCliente.invalid || guardando">
+          <ion-icon name="sync" *ngIf="guardando" class="spin"></ion-icon>
+          <ion-icon name="checkmark" *ngIf="!guardando"></ion-icon>
+          {{guardando ? 'Guardando...' : (esEdicion ? 'Actualizar Cliente' : 'Crear Cliente')}}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,296 @@
+<div class="pedidos-page bocket-animate-in">
+  <div class="page-header professional-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1 class="page-title-enhanced">
+          <ion-icon name="receipt-outline" class="title-icon"></ion-icon>
+          Gestión de Pedidos
+        </h1>
+        <p class="page-subtitle-enhanced">Administra y monitorea todos los pedidos en tiempo real</p>
+      </div>
+      <div class="header-actions">
+        <ion-button fill="clear" (click)="actualizarLista()" [disabled]="cargando" class="refresh-btn-pedidos">
+          <ion-icon name="refresh-outline" [class.spinning-icon]="cargando"></ion-icon>
+          <span *ngIf="!cargando">Actualizar</span>
+          <span *ngIf="cargando">Actualizando...</span>
+        </ion-button>
+        <ion-button color="primary" (click)="nuevoPedido()" class="new-order-btn">
+          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+          Nuevo Pedido
+        </ion-button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Estadísticas Mejoradas -->
+  <div class="stats-grid-enhanced">
+    <div class="stat-card-enhanced total-orders" (click)="filtrarPorEstado('')">
+      <div class="stat-icon-container">
+        <ion-icon name="receipt" class="stat-icon"></ion-icon>
+        <div class="stat-pulse"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.total }}</div>
+        <div class="stat-label-enhanced">Total Pedidos</div>
+        <div class="stat-trend">
+          <ion-icon name="trending-up" class="trend-icon"></ion-icon>
+          <span class="trend-text">+5% vs ayer</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced pending-orders" (click)="filtrarPorEstado('pending')">
+      <div class="stat-icon-container">
+        <ion-icon name="time" class="stat-icon"></ion-icon>
+        <div class="stat-pulse warning"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.pendientes }}</div>
+        <div class="stat-label-enhanced">Pendientes</div>
+        <div class="stat-trend warning" *ngIf="estadisticas.pendientes > 0">
+          <ion-icon name="alert-circle" class="trend-icon"></ion-icon>
+          <span class="trend-text">Requiere atención</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced accepted-orders" (click)="filtrarPorEstado('accepted')">
+      <div class="stat-icon-container">
+        <ion-icon name="checkmark-circle" class="stat-icon"></ion-icon>
+        <div class="stat-pulse success"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.aceptados }}</div>
+        <div class="stat-label-enhanced">Aceptados</div>
+        <div class="stat-trend success">
+          <ion-icon name="checkmark" class="trend-icon"></ion-icon>
+          <span class="trend-text">En proceso</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced delivery-orders" (click)="filtrarPorEstado('inDelivery')">
+      <div class="stat-icon-container">
+        <ion-icon name="bicycle" class="stat-icon"></ion-icon>
+        <div class="stat-pulse delivery"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.enDelivery }}</div>
+        <div class="stat-label-enhanced">En Delivery</div>
+        <div class="stat-trend delivery">
+          <ion-icon name="location" class="trend-icon"></ion-icon>
+          <span class="trend-text">En camino</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced delivered-orders" (click)="filtrarPorEstado('deliveried')">
+      <div class="stat-icon-container">
+        <ion-icon name="checkmark-done" class="stat-icon"></ion-icon>
+        <div class="stat-pulse success"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.entregados }}</div>
+        <div class="stat-label-enhanced">Entregados</div>
+        <div class="stat-trend success">
+          <ion-icon name="checkmark-circle" class="trend-icon"></ion-icon>
+          <span class="trend-text">Completados</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="filtros-section">
+    <div class="filtros-row">
+      <ion-searchbar 
+        placeholder="Buscar pedidos..."
+        [value]="terminoBusqueda"
+        (ionInput)="buscarPedidos($event)"
+        class="search-bar">
+      </ion-searchbar>
+      
+      <ion-select 
+        [value]="filtroEstado"
+        (ionChange)="filtrarPorEstadoSelect($event)"
+        placeholder="Estado"
+        class="filter-select">
+        <ion-select-option *ngFor="let estado of estadosDisponibles" [value]="estado.value">
+          {{ estado.label }}
+        </ion-select-option>
+      </ion-select>
+      
+      <ion-select 
+        [value]="filtroTipo"
+        (ionChange)="filtrarPorTipo($event)"
+        placeholder="Tipo"
+        class="filter-select">
+        <ion-select-option *ngFor="let tipo of tiposDisponibles" [value]="tipo.value">
+          {{ tipo.label }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+    
+    <!-- Filtros de fecha -->
+    <div class="filtros-fecha-row">
+      <ion-select 
+        [value]="filtroFecha"
+        (ionChange)="filtrarPorFecha($event)"
+        placeholder="Filtrar por fecha"
+        class="filter-select fecha-select">
+        <ion-select-option *ngFor="let periodo of periodosDisponibles" [value]="periodo.value">
+          {{ periodo.label }}
+        </ion-select-option>
+      </ion-select>
+      
+      <div class="fecha-custom" *ngIf="filtroFecha === 'custom'">
+        <ion-datetime
+          [value]="fechaDesde"
+          (ionChange)="cambiarFechaDesde($event)"
+          placeholder="Desde"
+          display-format="DD/MM/YYYY"
+          picker-format="DD MMM YYYY"
+          class="fecha-input">
+        </ion-datetime>
+        
+        <ion-datetime
+          [value]="fechaHasta"
+          (ionChange)="cambiarFechaHasta($event)"
+          placeholder="Hasta"
+          display-format="DD/MM/YYYY"
+          picker-format="DD MMM YYYY"
+          class="fecha-input">
+        </ion-datetime>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de Pedidos -->
+  <div class="pedidos-content">
+    <!-- Loading -->
+    <div *ngIf="cargando" class="loading-state">
+      <ion-spinner></ion-spinner>
+      <p>Cargando pedidos...</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="error && !cargando" class="error-state">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <p>{{ error }}</p>
+      <ion-button fill="outline" (click)="cargarPedidos()">
+        Reintentar
+      </ion-button>
+    </div>
+
+    <!-- Lista vacía -->
+    <div *ngIf="!cargando && !error && pedidosFiltrados.length === 0" class="empty-state">
+      <ion-icon name="restaurant-outline"></ion-icon>
+      <h3>No hay pedidos</h3>
+      <p>No se encontraron pedidos con los filtros aplicados</p>
+      <ion-button color="primary" (click)="nuevoPedido()">
+        Crear Primer Pedido
+      </ion-button>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div *ngIf="!cargando && !error && pedidosFiltrados.length > 0" class="pedidos-list">
+      <div *ngFor="let pedido of pedidosFiltrados" class="pedido-card" (click)="verDetallePedido(pedido)">
+        
+        <div class="pedido-header">
+          <div class="pedido-info">
+            <h3>{{ pedido.contactNameOrder }}</h3>
+            <p class="pedido-contact">{{ pedido.contact }}</p>
+          </div>
+          <div class="pedido-badges">
+            <span class="badge-estado" [ngClass]="obtenerClaseEstado(pedido.statusBooking)">
+              {{ obtenerEstadoLabel(pedido.statusBooking) }}
+            </span>
+            <span class="badge-tipo" [ngClass]="obtenerClaseTipo(pedido.orderType)">
+              {{ obtenerTipoLabel(pedido.orderType) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="pedido-body">
+          <div class="pedido-resumen">
+            <p><strong>Resumen:</strong> {{ pedido.resumeOrder }}</p>
+            <p *ngIf="pedido.addressToDelivery"><strong>Dirección:</strong> {{ pedido.addressToDelivery }}</p>
+          </div>
+          <div class="pedido-fecha-info">
+            <div class="fecha-item" *ngIf="pedido.fechaCreacion">
+              <ion-icon name="time-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Creado:</span>
+              <span class="fecha-valor">{{ formatearFechaHora(pedido.fechaCreacion) }}</span>
+            </div>
+            <div class="fecha-item" *ngIf="pedido.fechaActualizacion && pedido.fechaActualizacion !== pedido.fechaCreacion">
+              <ion-icon name="refresh-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Actualizado:</span>
+              <span class="fecha-valor">{{ formatearFechaHora(pedido.fechaActualizacion) }}</span>
+            </div>
+            <div class="fecha-item tiempo-transcurrido">
+              <ion-icon name="stopwatch-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Hace:</span>
+              <span class="fecha-valor">{{ calcularTiempoTranscurrido(pedido.fechaCreacion) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pedido-actions" (click)="$event.stopPropagation()">
+          <!-- Acciones según estado -->
+          <ion-button 
+            *ngIf="pedido.statusBooking === 'pending'" 
+            fill="clear" 
+            color="success" 
+            size="small"
+            (click)="aceptarPedido(pedido, $event)">
+            <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            *ngIf="pedido.statusBooking === 'pending'" 
+            fill="clear" 
+            color="danger" 
+            size="small"
+            (click)="rechazarPedido(pedido, $event)">
+            <ion-icon name="close" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            *ngIf="pedido.statusBooking === 'accepted'" 
+            fill="clear" 
+            color="warning" 
+            size="small"
+            (click)="marcarEnProceso(pedido, $event)">
+            <ion-icon name="time" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            *ngIf="pedido.statusBooking === 'inProcess'" 
+            fill="clear" 
+            color="primary" 
+            size="small"
+            (click)="marcarEnDelivery(pedido, $event)">
+            <ion-icon name="bicycle" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            *ngIf="pedido.statusBooking === 'inDelivery'" 
+            fill="clear" 
+            color="success" 
+            size="small"
+            (click)="marcarEntregado(pedido, $event)">
+            <ion-icon name="checkmark-done" slot="icon-only"></ion-icon>
+          </ion-button>
+
+          <ion-button 
+            fill="clear" 
+            color="medium" 
+            size="small"
+            (click)="editarPedido(pedido, $event)">
+            <ion-icon name="create" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
