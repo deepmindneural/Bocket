@@ -56,12 +56,12 @@ export class ClientePaginadoService {
   ) {}
 
   /**
-   * Carga la primera página de clientes
+   * Carga la primera página de clientes (ARQUITECTURA CORRECTA)
    */
   async cargarPrimerasPagina(pageSize: number = 10): Promise<void> {
     try {
       const restauranteActual = this.authService.obtenerRestauranteActual();
-      if (!restauranteActual?.id) {
+      if (!restauranteActual?.nombre) {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
@@ -69,7 +69,8 @@ export class ClientePaginadoService {
 
       const app = getApp();
       const db = getFirestore(app);
-      const clientesRef = collection(db, `restaurantes/${restauranteActual.id}/clientes`);
+      // ARQUITECTURA CORRECTA: usar nombre del restaurante
+      const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
       // Query con límite y ordenamiento
       const q = query(
@@ -124,7 +125,7 @@ export class ClientePaginadoService {
 
     try {
       const restauranteActual = this.authService.obtenerRestauranteActual();
-      if (!restauranteActual?.id) {
+      if (!restauranteActual?.nombre) {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
@@ -132,7 +133,8 @@ export class ClientePaginadoService {
 
       const app = getApp();
       const db = getFirestore(app);
-      const clientesRef = collection(db, `restaurantes/${restauranteActual.id}/clientes`);
+      // ARQUITECTURA CORRECTA: usar nombre del restaurante
+      const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
       const lastDoc = this.lastDocuments.get(currentState.currentPage);
       if (!lastDoc) {
@@ -195,13 +197,14 @@ export class ClientePaginadoService {
       this.actualizarEstadoPaginacion({ isLoading: true });
       
       const restauranteActual = this.authService.obtenerRestauranteActual();
-      if (!restauranteActual?.id) {
+      if (!restauranteActual?.nombre) {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
       const app = getApp();
       const db = getFirestore(app);
-      const clientesRef = collection(db, `restaurantes/${restauranteActual.id}/clientes`);
+      // ARQUITECTURA CORRECTA: usar nombre del restaurante
+      const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
       // Calcular cuántos documentos saltar
       const skipCount = (pageNumber - 1) * currentState.pageSize;
@@ -258,13 +261,14 @@ export class ClientePaginadoService {
       this.actualizarEstadoPaginacion({ isLoading: true });
       
       const restauranteActual = this.authService.obtenerRestauranteActual();
-      if (!restauranteActual?.id) {
+      if (!restauranteActual?.nombre) {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
       const app = getApp();
       const db = getFirestore(app);
-      const clientesRef = collection(db, `restaurantes/${restauranteActual.id}/clientes`);
+      // ARQUITECTURA CORRECTA: usar nombre del restaurante
+      const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
       // Firestore no soporta búsqueda de texto completo nativamente
       // Necesitamos cargar todos y filtrar localmente

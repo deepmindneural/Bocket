@@ -1,159 +1,304 @@
 <div class="clientes-page bocket-animate-in">
-  <!-- Header de la página -->
-  <div class="page-header">
+  <div class="page-header professional-header">
     <div class="header-content">
       <div class="header-info">
-        <h1>Gestión de Clientes</h1>
-        <p>Administra tu base de clientes de manera profesional</p>
+        <h1 class="page-title-enhanced">
+          <ion-icon name="people-outline" class="title-icon"></ion-icon>
+          Gestión de Clientes
+        </h1>
+        <p class="page-subtitle-enhanced">Administra tu base de clientes en tiempo real</p>
       </div>
       <div class="header-actions">
-        <ion-button class="bocket-button-premium" (click)="exportarClientes()">
-          <ion-icon name="download" slot="start"></ion-icon>
+        <ion-button fill="clear" (click)="actualizarLista()" [disabled]="cargando" class="refresh-btn-clientes">
+          <ion-icon name="refresh-outline" [class.spinning-icon]="cargando"></ion-icon>
+          <span *ngIf="!cargando">Actualizar</span>
+          <span *ngIf="cargando">Actualizando...</span>
+        </ion-button>
+        <ion-button fill="clear" (click)="exportarClientes()" class="export-btn">
+          <ion-icon name="download-outline" slot="start"></ion-icon>
           Exportar
         </ion-button>
-        <ion-button color="primary" (click)="nuevoCliente()">
-          <ion-icon name="add" slot="start"></ion-icon>
+        <ion-button color="primary" (click)="nuevoCliente()" class="new-client-btn">
+          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
           Nuevo Cliente
         </ion-button>
       </div>
     </div>
   </div>
+  
+  <!-- Estadísticas Mejoradas -->
+  <div class="stats-grid-enhanced">
+    <div class="stat-card-enhanced total-clients" (click)="filtrarPorTipo('')">
+      <div class="stat-icon-container">
+        <ion-icon name="people" class="stat-icon"></ion-icon>
+        <div class="stat-pulse"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.total }}</div>
+        <div class="stat-label-enhanced">Total Clientes</div>
+        <div class="stat-trend">
+          <ion-icon name="trending-up" class="trend-icon"></ion-icon>
+          <span class="trend-text">+12% vs mes anterior</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced vip-clients" (click)="filtrarPorTipo('vip')">
+      <div class="stat-icon-container">
+        <ion-icon name="star" class="stat-icon"></ion-icon>
+        <div class="stat-pulse warning"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.vip }}</div>
+        <div class="stat-label-enhanced">Clientes VIP</div>
+        <div class="stat-trend warning">
+          <ion-icon name="star" class="trend-icon"></ion-icon>
+          <span class="trend-text">Premium</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced active-clients" (click)="filtrarPorActividad('activos')">
+      <div class="stat-icon-container">
+        <ion-icon name="pulse" class="stat-icon"></ion-icon>
+        <div class="stat-pulse success"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.activos }}</div>
+        <div class="stat-label-enhanced">Activos</div>
+        <div class="stat-trend success">
+          <ion-icon name="checkmark-circle" class="trend-icon"></ion-icon>
+          <span class="trend-text">WhatsApp</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-card-enhanced new-clients" (click)="filtrarPorFecha('este_mes')">
+      <div class="stat-icon-container">
+        <ion-icon name="person-add" class="stat-icon"></ion-icon>
+        <div class="stat-pulse delivery"></div>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value-enhanced">{{ estadisticas.nuevosEsteMes }}</div>
+        <div class="stat-label-enhanced">Nuevos este mes</div>
+        <div class="stat-trend delivery">
+          <ion-icon name="add-circle" class="trend-icon"></ion-icon>
+          <span class="trend-text">Recientes</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Filtros y búsqueda -->
-  <div class="filtros-section bocket-card-premium">
-    <div class="filtros-content">
-      <div class="busqueda-container">
-        <ion-searchbar 
-          placeholder="Buscar por nombre, WhatsApp o email..."
-          [(ngModel)]="terminoBusqueda"
-          (ionInput)="buscarClientes($event)"
-          class="searchbar-professional">
-        </ion-searchbar>
-      </div>
+  <div class="filtros-section">
+    <div class="filtros-row">
+      <ion-searchbar 
+        placeholder="Buscar clientes..."
+        [value]="terminoBusqueda"
+        (ionInput)="buscarClientes($event)"
+        class="search-bar">
+      </ion-searchbar>
       
-      <div class="filtros-avanzados">
-        <ion-segment [(ngModel)]="filtroTipo" (ionChange)="filtrarPorTipo($event)">
-          <ion-segment-button value="todos">
-            <ion-label>Todos ({{clientes.length}})</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="vip">
-            <ion-label>VIP ({{contarPorTipo('vip')}})</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="regular">
-            <ion-label>Regular ({{contarPorTipo('regular')}})</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="corporativo">
-            <ion-label>Corporativo ({{contarPorTipo('corporativo')}})</ion-label>
-          </ion-segment-button>
-        </ion-segment>
+      <ion-select 
+        [value]="filtroTipo"
+        (ionChange)="filtrarPorTipoSelect($event)"
+        placeholder="Tipo"
+        class="filter-select">
+        <ion-select-option *ngFor="let tipo of tiposDisponibles" [value]="tipo.value">
+          {{ tipo.label }}
+        </ion-select-option>
+      </ion-select>
+      
+      <ion-select 
+        [value]="filtroActividad"
+        (ionChange)="filtrarPorActividad($event)"
+        placeholder="Actividad"
+        class="filter-select">
+        <ion-select-option *ngFor="let actividad of actividadesDisponibles" [value]="actividad.value">
+          {{ actividad.label }}
+        </ion-select-option>
+      </ion-select>
+      
+      <ion-select 
+        [value]="filtroFecha"
+        (ionChange)="filtrarPorFecha($event)"
+        placeholder="Fecha"
+        class="filter-select">
+        <ion-select-option *ngFor="let periodo of periodosDisponibles" [value]="periodo.value">
+          {{ periodo.label }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+    
+    <!-- Filtros de fecha personalizados -->
+    <div class="filtros-fecha-row" *ngIf="filtroFecha === 'custom'">
+      <div class="fecha-custom">
+        <ion-datetime
+          [value]="fechaDesde"
+          (ionChange)="cambiarFechaDesde($event)"
+          placeholder="Desde"
+          display-format="DD/MM/YYYY"
+          picker-format="DD MMM YYYY"
+          class="fecha-input">
+        </ion-datetime>
+        
+        <ion-datetime
+          [value]="fechaHasta"
+          (ionChange)="cambiarFechaHasta($event)"
+          placeholder="Hasta"
+          display-format="DD/MM/YYYY"
+          picker-format="DD MMM YYYY"
+          class="fecha-input">
+        </ion-datetime>
       </div>
     </div>
   </div>
 
-  <!-- Lista de clientes profesional -->
-  <div class="clientes-grid">
-    <div class="cliente-card bocket-card-premium" 
-         *ngFor="let cliente of clientesFiltrados; trackBy: trackByClienteId" 
-         (click)="verDetalleCliente(cliente)">
-      
-      <div class="cliente-header">
-        <div class="cliente-avatar">
-          <img [src]="cliente.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face'" 
-               [alt]="cliente.name || cliente.whatsAppName">
-        </div>
-        
-        <div class="cliente-info-principal">
-          <h3 class="cliente-nombre">{{cliente.name || cliente.whatsAppName}}</h3>
-          <div class="cliente-contacto">
-            <span class="whatsapp">
-              <ion-icon name="logo-whatsapp"></ion-icon>
-              {{cliente.id}}
-            </span>
-            <span class="source-type">
-              <ion-icon name="radio-button-on"></ion-icon>
-              {{cliente.sourceType === 'chatBot' ? 'ChatBot' : 'Manual'}}
-            </span>
-          </div>
-        </div>
-        
-        <div class="cliente-badges">
-          <div class="bocket-chip" [ngClass]="'status-' + getClienteType(cliente)">
-            {{getClienteType(cliente) | titlecase}}
-          </div>
-          <div class="bocket-chip status-whatsapp" *ngIf="cliente.isWAContact">
-            WhatsApp
-          </div>
-          <div class="bocket-chip status-enterprise" *ngIf="cliente.isEnterprise">
-            Empresa
-          </div>
-        </div>
-      </div>
-      
-      <div class="cliente-stats">
-        <div class="stat-item">
-          <span class="stat-label">Última actualización</span>
-          <span class="stat-value">{{formatearFecha(cliente.lastUpdate)}}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Contacto desde</span>
-          <span class="stat-value">{{formatearFecha(cliente.creation)}}</span>
-        </div>
-        <div class="stat-item" *ngIf="cliente.userInteractions?.whatsapp">
-          <span class="stat-label">Mensajes WhatsApp</span>
-          <span class="stat-value">{{cliente.userInteractions?.whatsapp}}</span>
-        </div>
-        <div class="stat-item" *ngIf="cliente.userInteractions?.fee">
-          <span class="stat-label">Fee total</span>
-          <span class="stat-value">${{cliente.userInteractions?.fee | number:'1.0-0'}}</span>
-        </div>
-        <div class="stat-item" *ngIf="cliente.labels">
-          <span class="stat-label">Etiquetas</span>
-          <span class="stat-value">{{cliente.labels}}</span>
-        </div>
-      </div>
-      
-      <div class="cliente-acciones">
-        <ion-button fill="clear" size="small" (click)="editarCliente(cliente, $event)">
-          <ion-icon name="create" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button fill="clear" size="small" (click)="contactarCliente(cliente, $event)">
-          <ion-icon name="chatbubble" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button fill="clear" size="small" (click)="verHistorial(cliente, $event)">
-          <ion-icon name="time" slot="icon-only"></ion-icon>
-        </ion-button>
-      </div>
+  <!-- Lista de Clientes -->
+  <div class="clientes-content">
+    <!-- Loading -->
+    <div *ngIf="cargando" class="loading-state">
+      <ion-spinner></ion-spinner>
+      <p>Cargando clientes...</p>
     </div>
-  </div>
 
-  <!-- Estado vacío -->
-  <div class="estado-vacio" *ngIf="clientesFiltrados.length === 0">
-    <div class="vacio-icon">
+    <!-- Error -->
+    <div *ngIf="error && !cargando" class="error-state">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <p>{{ error }}</p>
+      <ion-button fill="outline" (click)="cargarClientes()">
+        Reintentar
+      </ion-button>
+    </div>
+
+    <!-- Lista vacía -->
+    <div *ngIf="!cargando && !error && clientesFiltrados.length === 0" class="empty-state">
       <ion-icon name="people-outline"></ion-icon>
+      <h3>No hay clientes registrados</h3>
+      <p *ngIf="clientes.length === 0">
+        No se encontraron clientes en la base de datos Firebase.<br>
+        Los datos se almacenan en <code>/clients/worldfood/Formularios</code>
+      </p>
+      <p *ngIf="clientes.length > 0">
+        No se encontraron clientes con los filtros aplicados
+      </p>
+      <div class="empty-actions">
+        <ion-button color="primary" (click)="nuevoCliente()">
+          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+          Crear Primer Cliente
+        </ion-button>
+        <ion-button fill="outline" color="secondary" routerLink="/verificacion">
+          <ion-icon name="bug-outline" slot="start"></ion-icon>
+          Verificar Conexión
+        </ion-button>
+      </div>
     </div>
-    <h3>No se encontraron clientes</h3>
-    <p>{{terminoBusqueda ? 'Intenta con otros términos de búsqueda' : 'Agrega tu primer cliente para comenzar'}}</p>
-    <ion-button color="primary" (click)="nuevoCliente()">
-      <ion-icon name="add" slot="start"></ion-icon>
-      Agregar Cliente
-    </ion-button>
+
+    <!-- Lista de clientes -->
+    <div *ngIf="!cargando && !error && clientesFiltrados.length > 0" class="clientes-list">
+      <div *ngFor="let cliente of clientesFiltrados; trackBy: trackByClienteId" class="cliente-card" (click)="verDetalleCliente(cliente)">
+        
+        <div class="cliente-header">
+          <div class="cliente-info">
+            <div class="cliente-avatar">
+              <img [src]="cliente.image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face'" 
+                   [alt]="cliente.name || cliente.whatsAppName">
+            </div>
+            <div class="cliente-datos">
+              <h3>{{ cliente.name || cliente.whatsAppName }}</h3>
+              <p class="cliente-contact">{{ cliente.id }} - {{ cliente.email || 'Sin email' }}</p>
+            </div>
+          </div>
+          <div class="cliente-badges">
+            <span class="badge-tipo" [ngClass]="obtenerClaseTipo(cliente)">
+              {{ obtenerTipoLabel(cliente) }}
+            </span>
+            <span class="badge-estado" [ngClass]="'status-' + (cliente.isWAContact ? 'active' : 'inactive')" *ngIf="cliente.isWAContact">
+              WhatsApp
+            </span>
+          </div>
+        </div>
+
+        <div class="cliente-body">
+          <div class="cliente-stats">
+            <div class="stat-item" *ngIf="cliente.userInteractions?.whatsapp">
+              <ion-icon name="chatbubble-outline" class="stat-icon"></ion-icon>
+              <span class="stat-label">Mensajes:</span>
+              <span class="stat-value">{{ cliente.userInteractions?.whatsapp }}</span>
+            </div>
+            <div class="stat-item" *ngIf="cliente.userInteractions?.fee">
+              <ion-icon name="cash-outline" class="stat-icon"></ion-icon>
+              <span class="stat-label">Fee total:</span>
+              <span class="stat-value">${{ cliente.userInteractions?.fee | number:'1.0-0' }}</span>
+            </div>
+          </div>
+          <div class="cliente-fecha-info">
+            <div class="fecha-item">
+              <ion-icon name="person-add-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Creado:</span>
+              <span class="fecha-valor">{{ formatearFechaHora(cliente.creation) }}</span>
+            </div>
+            <div class="fecha-item" *ngIf="cliente.lastUpdate && cliente.lastUpdate !== cliente.creation">
+              <ion-icon name="refresh-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Actualizado:</span>
+              <span class="fecha-valor">{{ formatearFechaHora(cliente.lastUpdate) }}</span>
+            </div>
+            <div class="fecha-item tiempo-transcurrido">
+              <ion-icon name="time-outline" class="fecha-icon"></ion-icon>
+              <span class="fecha-label">Hace:</span>
+              <span class="fecha-valor">{{ calcularTiempoTranscurrido(cliente.lastUpdate || cliente.creation) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cliente-actions" (click)="$event.stopPropagation()">
+          <ion-button 
+            fill="clear" 
+            color="primary" 
+            size="small"
+            (click)="contactarCliente(cliente, $event)">
+            <ion-icon name="chatbubble" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            color="warning" 
+            size="small"
+            (click)="verHistorial(cliente, $event)">
+            <ion-icon name="time" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <!-- Botón convertir a VIP (solo si no es VIP) -->
+          <ion-button 
+            *ngIf="getClienteType(cliente) !== 'vip'"
+            fill="clear" 
+            color="tertiary" 
+            size="small"
+            (click)="convertirAVip(cliente, $event)"
+            title="Convertir a VIP">
+            <ion-icon name="star" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <!-- Botón inactivar/activar cliente -->
+          <ion-button 
+            fill="clear" 
+            [color]="cliente.isWAContact ? 'danger' : 'success'"
+            size="small"
+            (click)="toggleActivarCliente(cliente, $event)"
+            [title]="cliente.isWAContact ? 'Inactivar cliente' : 'Activar cliente'">
+            <ion-icon [name]="cliente.isWAContact ? 'pause' : 'play'" slot="icon-only"></ion-icon>
+          </ion-button>
+          
+          <ion-button 
+            fill="clear" 
+            color="medium" 
+            size="small"
+            (click)="editarCliente(cliente, $event)">
+            <ion-icon name="create" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Estadísticas rápidas -->
-  <div class="stats-footer">
-    <div class="quick-stats">
-      <div class="quick-stat">
-        <span class="stat-number">{{clientes.length}}</span>
-        <span class="stat-text">Total Clientes</span>
-      </div>
-      <div class="quick-stat">
-        <span class="stat-number">{{clientesActivos}}</span>
-        <span class="stat-text">Activos</span>
-      </div>
-      <div class="quick-stat">
-        <span class="stat-number">{{clientesNuevosEsteMes}}</span>
-        <span class="stat-text">Nuevos este mes</span>
-      </div>
-    </div>
-  </div>
 </div>

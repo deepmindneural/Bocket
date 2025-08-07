@@ -3,6 +3,8 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 import { MainLayoutComponent } from './layouts/main-layout.component';
 import { LoginComponent } from './auth/login.component';
 import { FirebaseTestComponent } from './admin/firebase-test.component';
+import { VerificacionTemporalComponent } from './verificacion-temporal.component';
+import { VerificacionMultiTenantComponent } from './verificacion-multi-tenant.component';
 import { AuthGuard } from './guards/auth.guard';
 import { TenantGuard } from './guards/tenant.guard';
 
@@ -17,6 +19,18 @@ const routes: Routes = [
   {
     path: 'firebase-test',
     component: FirebaseTestComponent
+  },
+  
+  // Ruta de verificación temporal
+  {
+    path: 'verificacion',
+    component: VerificacionTemporalComponent
+  },
+  
+  // Ruta de verificación multi-tenant
+  {
+    path: 'verificacion-multi-tenant',
+    component: VerificacionMultiTenantComponent
   },
   
   // Módulo de administración backend (sin layout principal)

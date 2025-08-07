@@ -1144,11 +1144,13 @@ export class AdminRestaurantesComponent implements OnInit {
   async guardarRestaurante() {
     try {
       this.guardandoRestaurante = true;
+      console.log('🚀 Iniciando proceso de guardado de restaurante...');
 
       // Validar datos
       const validacion = this.adminService.validarDatosRestaurante(this.formularioRestaurante, this.modoEdicion);
       if (!validacion.esValido) {
         await this.mostrarToast(validacion.errores.join(', '), 'danger');
+        this.guardandoRestaurante = false; // Resetear inmediatamente
         return;
       }
 
@@ -1160,17 +1162,21 @@ export class AdminRestaurantesComponent implements OnInit {
         );
         if (!slugDisponible) {
           await this.mostrarToast('El slug ya está en uso. Por favor elige otro.', 'danger');
+          this.guardandoRestaurante = false; // Resetear inmediatamente
           return;
         }
       }
 
       if (this.modoEdicion) {
         // Actualizar restaurante existente con logo si se proporcionó
+        console.log('📝 Actualizando restaurante existente...');
         await this.adminService.actualizarRestaurante(this.restauranteEditando.id, this.formularioRestaurante, this.logoFile || undefined);
         await this.mostrarToast('Restaurante actualizado exitosamente', 'success');
       } else {
         // Crear nuevo restaurante con logo
+        console.log('🆕 Creando nuevo restaurante...');
         const restauranteId = await this.adminService.crearRestaurante(this.formularioRestaurante, this.logoFile || undefined);
+        console.log('✅ Restaurante creado exitosamente, ID:', restauranteId);
         
         // Mostrar las credenciales de acceso
         await this.mostrarCredencialesNuevoRestaurante(this.formularioRestaurante.email, this.formularioRestaurante.password, restauranteId);
@@ -1178,14 +1184,18 @@ export class AdminRestaurantesComponent implements OnInit {
       }
 
       // Recargar lista y cerrar modal
+      console.log('🔄 Recargando lista de restaurantes...');
       await this.cargarRestaurantes();
       this.cerrarModal();
+      console.log('✅ Proceso completado exitosamente');
 
     } catch (error) {
-      console.error('Error guardando restaurante:', error);
+      console.error('❌ Error guardando restaurante:', error);
       await this.mostrarToast(`Error: ${(error as any)?.message || 'Error desconocido'}`, 'danger');
     } finally {
+      // Asegurar que siempre se resetee el estado de guardando
       this.guardandoRestaurante = false;
+      console.log('🔄 Estado de guardando reseteado');
     }
   }
 

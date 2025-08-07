@@ -6,7 +6,7 @@ import { Observable, from, of, switchMap } from 'rxjs';
 import { UsuarioGlobal, UsuarioRestaurante } from '../modelos';
 
 // Import Firebase SDK nativo para operaciones directas
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 
 @Injectable({
@@ -110,18 +110,69 @@ export class AuthService {
         console.log('🏪 AuthService: Restaurante principal ID:', restaurantePrincipalId);
         
         if (restaurantePrincipalId) {
-          console.log('🔍 AuthService: Buscando datos del restaurante...');
+          console.log('🔍 AuthService: Buscando datos del restaurante con NUEVA ARQUITECTURA...');
           
-          // Usar Firebase SDK nativo también para el restaurante
           const app = getApp();
           const db = getFirestore(app);
-          const restauranteDocRef = doc(db, 'restaurantes', restaurantePrincipalId);
-          const restauranteDoc = await getDoc(restauranteDocRef);
+          let restauranteEncontrado = false;
           
-          if (restauranteDoc.exists()) {
-            const data = restauranteDoc.data();
-            this.currentRestaurant = { id: restauranteDoc.id, ...data };
+          // ARQUITECTURA CORRECTA: Buscar admin en /adminUsers/ y luego restaurante por nombre
+          try {
+            console.log(`📍 ARQUITECTURA CORRECTA - Consultando admin: /adminUsers/${this.currentUser?.uid}`);
+            const adminRef = doc(db, 'adminUsers', this.currentUser!.uid);
+            const adminSnap = await getDoc(adminRef);
             
+            if (adminSnap.exists()) {
+              const adminData = adminSnap.data();
+              const nombreRestaurante = adminData['restauranteAsignado'];
+              console.log(`✅ Admin encontrado, restaurante asignado: ${nombreRestaurante}`);
+              
+              // Buscar datos del restaurante por nombre
+              const restauranteInfoRef = doc(db, `clients/${nombreRestaurante}/info`, 'restaurante');
+              const infoSnap = await getDoc(restauranteInfoRef);
+              
+              if (infoSnap.exists()) {
+                const data = infoSnap.data();
+                this.currentRestaurant = { 
+                  id: adminData['restauranteId'] || restaurantePrincipalId, 
+                  nombre: nombreRestaurante,
+                  ...data 
+                };
+                
+                console.log('✅ AuthService: Restaurante encontrado en ARQUITECTURA CORRECTA:', this.currentRestaurant.nombre);
+                restauranteEncontrado = true;
+              }
+            } else {
+              console.log('⚠️ ARQUITECTURA CORRECTA - Admin no encontrado, probando estructura antigua...');
+            }
+          } catch (error) {
+            console.log('⚠️ Error consultando arquitectura correcta, probando estructura antigua:', error);
+          }
+          
+          // COMPATIBILIDAD: Si no se encuentra en nueva arquitectura, buscar en estructura antigua
+          if (!restauranteEncontrado) {
+            console.log('🔄 COMPATIBILIDAD - Consultando estructura antigua: /clients/worldfood/Formularios/');
+            
+            const formulariosRef = collection(db, 'clients/worldfood/Formularios');
+            const restauranteQuery = query(formulariosRef, 
+              where('typeForm', '==', 'restaurante'),
+              where('restauranteId', '==', restaurantePrincipalId)
+            );
+            const snapshot = await getDocs(restauranteQuery);
+            
+            if (!snapshot.empty) {
+              const docRestaurante = snapshot.docs[0];
+              const data = docRestaurante.data();
+              this.currentRestaurant = { id: data['restauranteId'] || docRestaurante.id, ...data };
+              
+              console.log('✅ AuthService: Restaurante encontrado en COMPATIBILIDAD:', this.currentRestaurant.nombre);
+              restauranteEncontrado = true;
+            } else {
+              console.log('❌ AuthService: Documento de restaurante no encontrado en ninguna estructura');
+            }
+          }
+          
+          if (restauranteEncontrado) {
             // Guardar en localStorage como respaldo
             try {
               localStorage.setItem('bocket_current_restaurant', JSON.stringify(this.currentRestaurant));
@@ -131,7 +182,7 @@ export class AuthService {
             }
             
             this.aplicarTemaRestaurante(this.currentRestaurant);
-            console.log('✅ AuthService: Restaurante cargado exitosamente:', this.currentRestaurant);
+            console.log('✅ AuthService: Restaurante cargado exitosamente:', this.currentRestaurant.nombre);
             console.log('🎨 AuthService: Tema aplicado, navegando a dashboard...');
             
             // Verificar estado final antes de navegar
@@ -147,7 +198,7 @@ export class AuthService {
             
             return true;
           } else {
-            console.log('❌ AuthService: Documento de restaurante no encontrado');
+            console.log('❌ AuthService: No se pudo cargar el restaurante desde ninguna estructura');
             return false;
           }
         } else {

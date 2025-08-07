@@ -52,7 +52,7 @@
 .login-content {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   padding: 20px 0;
   position: relative;
@@ -120,17 +120,18 @@
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  padding: 24px;
+  padding: 32px;
   width: 100%;
+  max-width: 400px;
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   overflow: hidden;
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
 
   &::before {
     content: '';
@@ -144,19 +145,19 @@
 
   .card-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 32px;
     flex-shrink: 0;
 
     .login-title {
-      margin: 0 0 6px 0;
-      font-size: 22px;
+      margin: 0 0 8px 0;
+      font-size: 24px;
       font-weight: 700;
       color: #1f2937;
     }
 
     .login-subtitle {
       margin: 0;
-      font-size: 13px;
+      font-size: 14px;
       color: #6b7280;
     }
   }
@@ -198,7 +199,7 @@
 // Formulario
 .login-form {
   .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     .form-label {
       display: block;
@@ -288,7 +289,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 
   .checkbox-container {
     display: flex;
@@ -429,20 +430,21 @@
 // Botones
 .btn-login {
   width: 100%;
-  padding: 16px;
+  padding: 18px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 0;
+  margin-top: 8px;
 
   &:hover:not(:disabled) {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -529,8 +531,8 @@
 // Footer del card
 .card-footer {
   text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
+  padding-top: 0;
+  border-top: none;
 
   .signup-text {
     margin: 0;

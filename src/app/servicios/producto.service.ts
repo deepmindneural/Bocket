@@ -15,13 +15,14 @@ export class ProductoService {
     private authService: AuthService
   ) {}
 
-  // Obtener la ruta de la colección basada en el restaurante actual
+  // Obtener la ruta de la colección basada en el restaurante actual (ARQUITECTURA CORRECTA)
   private getCollectionPath(): string {
     const restauranteActual = this.authService.obtenerRestauranteActual();
-    if (!restauranteActual?.id) {
+    if (!restauranteActual?.nombre) {
       throw new Error('No hay restaurante actual seleccionado');
     }
-    return `restaurantes/${restauranteActual.id}/productos`;
+    // ARQUITECTURA CORRECTA: usar nombre del restaurante
+    return `clients/${restauranteActual.nombre}/productos`;
   }
 
   // CRUD: Obtener todos los productos
@@ -61,7 +62,7 @@ export class ProductoService {
   // CRUD: Crear nuevo producto
   async crear(producto: Partial<Producto>): Promise<Producto> {
     const restauranteActual = this.authService.obtenerRestauranteActual();
-    if (!restauranteActual?.id) {
+    if (!restauranteActual?.nombre) {
       throw new Error('No hay restaurante actual seleccionado');
     }
 

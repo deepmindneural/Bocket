@@ -13,11 +13,38 @@ export class RestauranteService {
 
   constructor(private firestore: AngularFirestore) {}
 
-  // Obtener restaurante por ID usando Firebase SDK nativo
+  // Obtener restaurante por ID usando Firebase SDK nativo (ARQUITECTURA CORRECTA)
   async obtenerPorId(id: string): Promise<Restaurante | null> {
     try {
       const app = getApp();
       const db = getFirestore(app);
+      
+      // ARQUITECTURA CORRECTA: Buscar en adminUsers primero para obtener el nombre
+      const adminDocRef = doc(db, 'adminUsers', id);
+      const adminDoc = await getDoc(adminDocRef);
+      
+      if (adminDoc.exists()) {
+        const adminData = adminDoc.data();
+        const nombreRestaurante = adminData['restauranteAsignado'];
+        
+        // Buscar información del restaurante por nombre
+        const restauranteDocRef = doc(db, `clients/${nombreRestaurante}/info`, 'restaurante');
+        const restauranteDoc = await getDoc(restauranteDocRef);
+        
+        if (restauranteDoc.exists()) {
+          const data = restauranteDoc.data();
+          // Convertir Timestamps si existen
+          if (data['fechaCreacion'] && data['fechaCreacion'].toDate) {
+            data['fechaCreacion'] = data['fechaCreacion'].toDate();
+          }
+          if (data['fechaActualizacion'] && data['fechaActualizacion'].toDate) {
+            data['fechaActualizacion'] = data['fechaActualizacion'].toDate();
+          }
+          return { id: adminData['restauranteId'] || id, nombre: nombreRestaurante, ...data } as Restaurante;
+        }
+      }
+      
+      // COMPATIBILIDAD: Buscar en estructura antigua
       const restauranteDocRef = doc(db, 'restaurantes', id);
       const restauranteDoc = await getDoc(restauranteDocRef);
       
@@ -232,37 +259,32 @@ export class RestauranteService {
     }
   }
 
-  // Crear estructura inicial de colecciones para un nuevo restaurante
-  private async crearEstructuraInicial(restauranteId: string): Promise<void> {
+  // Crear estructura inicial de colecciones usando ARQUITECTURA CORRECTA
+  private async crearEstructuraInicial(nombreRestaurante: string): Promise<void> {
     try {
+      const app = getApp();
+      const db = getFirestore(app);
+      
       const colecciones = [
         'clientes',
         'reservas', 
         'pedidos',
-        'productos',
-        'categorias',
-        'mesas',
-        'promociones',
-        'configuracion'
+        'productos'
       ];
 
-      // Crear documento placeholder en cada colección
+      // ARQUITECTURA CORRECTA: Crear en /clients/{nombreRestaurante}/
       for (const coleccion of colecciones) {
-        await this.firestore
-          .collection(`restaurantes/${restauranteId}/${coleccion}`)
-          .doc('_config')
-          .set({
-            _placeholder: true,
-            fechaCreacion: new Date(),
-            descripcion: `Colección ${coleccion} para ${restauranteId}`
-          });
+        const coleccionRef = doc(db, `clients/${nombreRestaurante}/${coleccion}`, '_config');
+        await setDoc(coleccionRef, {
+          _placeholder: true,
+          fechaCreacion: new Date(),
+          descripcion: `Colección ${coleccion} para ${nombreRestaurante}`
+        });
       }
 
-      // Crear configuración inicial del restaurante
-      await this.firestore
-        .collection(`restaurantes/${restauranteId}/configuracion`)
-        .doc('general')
-        .set({
+      // Crear configuración inicial del restaurante en info
+      const configRef = doc(db, `clients/${nombreRestaurante}/info`, 'configuracion');
+      await setDoc(configRef, {
           notificaciones: {
             email: true,
             push: false,
