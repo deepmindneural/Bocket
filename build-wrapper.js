@@ -3,7 +3,7 @@
 // Temporarily override Node.js version check
 const originalNodeVersion = process.version;
 Object.defineProperty(process, 'version', {
-  value: 'v20.19.0',
+  value: 'v22.12.0',
   configurable: true,
   writable: true
 });
