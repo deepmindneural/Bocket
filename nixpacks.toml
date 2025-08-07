@@ -1,16 +1,14 @@
+[variables]
+NODE_VERSION = "20.19.0"
+
 [phases.setup]
-nixPkgs = ['nodejs-20_x', 'npm']
+nixPkgs = ["nodejs-20_x"]
 
 [phases.install]
-cmds = ['npm ci --production=false']
+cmds = ["npm ci"]
 
 [phases.build]
-cmds = ['npm run build']
+cmds = ["npm run build"]
 
-[phases.start]
-cmd = 'npm start'
-
-[variables]
-NODE_VERSION = '20.19.0'
-NPM_VERSION = '10.2.4'
-NODE_ENV = 'production'
+[start]
+cmd = "npm start"
