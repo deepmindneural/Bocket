@@ -1,5 +1,16 @@
 [variables]
 NODE_OPTIONS = "--max-old-space-size=4096"
+# Force cache invalidation
+NIXPACKS_NO_CACHE = "1"
+
+[phases.setup]
+cmds = ["rm -rf node_modules package-lock.json", "npm cache clean --force"]
+
+[phases.install]  
+cmds = ["npm install --no-package-lock --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"

@@ -2,18 +2,12 @@ node_modules/
 dist/
 .git/
 *.md
-*.js
-!server.js
-!angular.json
-!package.json
-!package-lock.json
-!capacitor.config.ts
-!ionic.config.json
-!tsconfig*.json
-!nixpacks.toml
 .angular/
 coverage/
 e2e/
 .vscode/
 .idea/
 *.log
+# Force cache invalidation
+build-wrapper.js
+package-lock.json
