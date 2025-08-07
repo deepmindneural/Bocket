@@ -1,7 +1,7 @@
 [variables]
-NIXPACKS_NODE_VERSION = "20.19.0"
+NODE_OPTIONS = "--max-old-space-size=4096"
 
-[phases.build]
+[phases.build]  
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
