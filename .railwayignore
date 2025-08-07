@@ -11,7 +11,6 @@ dist/
 !ionic.config.json
 !tsconfig*.json
 !nixpacks.toml
-!build-wrapper.js
 .angular/
 coverage/
 e2e/
