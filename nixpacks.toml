@@ -1,14 +1,5 @@
 [variables]
 NODE_OPTIONS = "--max-old-space-size=4096"
 
-[phases.setup]
-cmds = ["npm cache clean --force"]
-
-[phases.install]
-cmds = ["npm install --legacy-peer-deps"]
-
-[phases.build]  
-cmds = ["npm run build"]
-
 [start]
 cmd = "npm start"
