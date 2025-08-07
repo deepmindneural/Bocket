@@ -2,7 +2,7 @@
 NODE_OPTIONS = "--max-old-space-size=4096"
 
 [phases.build]  
-cmds = ["npm install --legacy-peer-deps", "npm run build"]
+cmds = ["npm install --legacy-peer-deps --no-package-lock", "npm run build"]
 
 [start]
 cmd = "npm start"
