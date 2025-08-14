@@ -264,6 +264,12 @@ export class FormularioProductoComponent implements OnInit {
     return '';
   }
 
+  onImageError(event: any) {
+    if (event.target) {
+      (event.target as HTMLImageElement).style.display = 'none';
+    }
+  }
+
   async presentToast(message: string, color: 'success' | 'danger' | 'warning' = 'success') {
     const toast = await this.toastController.create({
       message: message,

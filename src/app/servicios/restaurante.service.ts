@@ -2,10 +2,6 @@ import { Injectable } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Restaurante } from '../modelos';
 
-// Import Firebase SDK nativo para operaciones directas
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
-
 @Injectable({
   providedIn: 'root'
 })
@@ -13,26 +9,26 @@ export class RestauranteService {
 
   constructor(private firestore: AngularFirestore) {}
 
-  // Obtener restaurante por ID usando Firebase SDK nativo (ARQUITECTURA CORRECTA)
+  // Obtener restaurante por ID usando AngularFirestore (ARQUITECTURA CORRECTA)
   async obtenerPorId(id: string): Promise<Restaurante | null> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
+      console.log('🔍 RestauranteService: Buscando restaurante por ID:', id);
       
       // ARQUITECTURA CORRECTA: Buscar en adminUsers primero para obtener el nombre
-      const adminDocRef = doc(db, 'adminUsers', id);
-      const adminDoc = await getDoc(adminDocRef);
+      const adminDoc = await this.firestore.doc(`adminUsers/${id}`).get().toPromise();
       
-      if (adminDoc.exists()) {
-        const adminData = adminDoc.data();
+      if (adminDoc && adminDoc.exists) {
+        const adminData = adminDoc.data() as any;
         const nombreRestaurante = adminData['restauranteAsignado'];
+        console.log('✅ RestauranteService: Admin encontrado, restaurante asignado:', nombreRestaurante);
         
-        // Buscar información del restaurante por nombre
-        const restauranteDocRef = doc(db, `clients/${nombreRestaurante}/info`, 'restaurante');
-        const restauranteDoc = await getDoc(restauranteDocRef);
+        // Buscar información del restaurante por nombre (ESTRUCTURA CORRECTA)
+        const restauranteDoc = await this.firestore.doc(`clients/${nombreRestaurante}/configuracion/restaurante`).get().toPromise();
         
-        if (restauranteDoc.exists()) {
-          const data = restauranteDoc.data();
+        if (restauranteDoc && restauranteDoc.exists) {
+          const data = restauranteDoc.data() as any;
+          console.log('✅ RestauranteService: Configuración de restaurante encontrada');
+          
           // Convertir Timestamps si existen
           if (data['fechaCreacion'] && data['fechaCreacion'].toDate) {
             data['fechaCreacion'] = data['fechaCreacion'].toDate();
@@ -45,11 +41,12 @@ export class RestauranteService {
       }
       
       // COMPATIBILIDAD: Buscar en estructura antigua
-      const restauranteDocRef = doc(db, 'restaurantes', id);
-      const restauranteDoc = await getDoc(restauranteDocRef);
+      const restauranteDoc = await this.firestore.doc(`restaurantes/${id}`).get().toPromise();
       
-      if (restauranteDoc.exists()) {
-        const data = restauranteDoc.data();
+      if (restauranteDoc && restauranteDoc.exists) {
+        const data = restauranteDoc.data() as any;
+        console.log('✅ RestauranteService: Restaurante encontrado en estructura antigua');
+        
         // Convertir Timestamps si existen
         if (data['fechaCreacion'] && data['fechaCreacion'].toDate) {
           data['fechaCreacion'] = data['fechaCreacion'].toDate();
@@ -60,9 +57,10 @@ export class RestauranteService {
         return { id: restauranteDoc.id, ...data } as Restaurante;
       }
       
+      console.log('❌ RestauranteService: No se encontró restaurante para ID:', id);
       return null;
     } catch (error) {
-      console.error('Error obteniendo restaurante por ID:', error);
+      console.error('❌ RestauranteService: Error obteniendo restaurante por ID:', error);
       throw error;
     }
   }
@@ -112,7 +110,7 @@ export class RestauranteService {
     return [];
   }
 
-  // Crear nuevo restaurante usando Firebase SDK nativo
+  // Crear nuevo restaurante usando AngularFirestore
   async crear(restaurante: Omit<Restaurante, 'id'>): Promise<Restaurante> {
     try {
       // Generar ID único
@@ -126,13 +124,10 @@ export class RestauranteService {
         activo: true
       };
 
-      const app = getApp();
-      const db = getFirestore(app);
-      const restauranteDocRef = doc(db, 'restaurantes', restauranteId);
-      await setDoc(restauranteDocRef, nuevoRestaurante);
+      await this.firestore.doc(`restaurantes/${restauranteId}`).set(nuevoRestaurante);
       
       // Crear estructura inicial de colecciones
-      await this.crearEstructuraInicial(restauranteId);
+      await this.crearEstructuraInicial(restaurante.slug);
       
       return nuevoRestaurante;
     } catch (error) {
@@ -141,18 +136,33 @@ export class RestauranteService {
     }
   }
 
-  // Actualizar restaurante usando Firebase SDK nativo
+  // Actualizar restaurante usando AngularFirestore (ARQUITECTURA CORRECTA)
   async actualizar(id: string, cambios: Partial<Restaurante>): Promise<Restaurante> {
     try {
+      console.log('🔄 RestauranteService: Actualizando restaurante ID:', id);
+      
       const datosActualizacion = {
         ...cambios,
         fechaActualizacion: new Date()
       };
       
-      const app = getApp();
-      const db = getFirestore(app);
-      const restauranteDocRef = doc(db, 'restaurantes', id);
-      await updateDoc(restauranteDocRef, datosActualizacion);
+      // ARQUITECTURA CORRECTA: Buscar en adminUsers primero para obtener el nombre del restaurante
+      const adminDoc = await this.firestore.doc(`adminUsers/${id}`).get().toPromise();
+      
+      if (adminDoc && adminDoc.exists) {
+        const adminData = adminDoc.data() as any;
+        const nombreRestaurante = adminData['restauranteAsignado'];
+        console.log('✅ RestauranteService: Actualizando en nueva arquitectura:', nombreRestaurante);
+        
+        // Actualizar en la nueva estructura: /clients/{nombreRestaurante}/configuracion/restaurante
+        await this.firestore.doc(`clients/${nombreRestaurante}/configuracion/restaurante`).set(datosActualizacion, { merge: true });
+        console.log('✅ RestauranteService: Configuración actualizada en nueva arquitectura');
+      } else {
+        console.log('⚠️ RestauranteService: Admin no encontrado, intentando estructura antigua');
+        // COMPATIBILIDAD: Usar estructura antigua como fallback
+        await this.firestore.doc(`restaurantes/${id}`).set(datosActualizacion, { merge: true });
+        console.log('✅ RestauranteService: Actualizado en estructura antigua');
+      }
       
       const restauranteActualizado = await this.obtenerPorId(id);
       if (!restauranteActualizado) {
@@ -161,18 +171,15 @@ export class RestauranteService {
       
       return restauranteActualizado;
     } catch (error) {
-      console.error('Error actualizando restaurante:', error);
+      console.error('❌ RestauranteService: Error actualizando restaurante:', error);
       throw error;
     }
   }
 
-  // Desactivar restaurante (soft delete) usando Firebase SDK nativo
+  // Desactivar restaurante (soft delete) usando AngularFirestore
   async desactivar(id: string): Promise<void> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      const restauranteDocRef = doc(db, 'restaurantes', id);
-      await updateDoc(restauranteDocRef, {
+      await this.firestore.doc(`restaurantes/${id}`).update({
         activo: false,
         fechaDesactivacion: new Date(),
         fechaActualizacion: new Date()
@@ -183,13 +190,10 @@ export class RestauranteService {
     }
   }
 
-  // Activar restaurante usando Firebase SDK nativo
+  // Activar restaurante usando AngularFirestore
   async activar(id: string): Promise<void> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      const restauranteDocRef = doc(db, 'restaurantes', id);
-      await updateDoc(restauranteDocRef, {
+      await this.firestore.doc(`restaurantes/${id}`).update({
         activo: true,
         fechaActualizacion: new Date()
       });
@@ -199,13 +203,10 @@ export class RestauranteService {
     }
   }
 
-  // Eliminar restaurante permanentemente (solo super admin) usando Firebase SDK nativo
+  // Eliminar restaurante permanentemente (solo super admin) usando AngularFirestore
   async eliminar(id: string): Promise<void> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      const restauranteDocRef = doc(db, 'restaurantes', id);
-      await deleteDoc(restauranteDocRef);
+      await this.firestore.doc(`restaurantes/${id}`).delete();
       
       // TODO: También eliminar todas las subcolecciones del restaurante
       // Esto requiere una Cloud Function para hacerlo de manera segura
@@ -262,9 +263,6 @@ export class RestauranteService {
   // Crear estructura inicial de colecciones usando ARQUITECTURA CORRECTA
   private async crearEstructuraInicial(nombreRestaurante: string): Promise<void> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      
       const colecciones = [
         'clientes',
         'reservas', 
@@ -274,17 +272,15 @@ export class RestauranteService {
 
       // ARQUITECTURA CORRECTA: Crear en /clients/{nombreRestaurante}/
       for (const coleccion of colecciones) {
-        const coleccionRef = doc(db, `clients/${nombreRestaurante}/${coleccion}`, '_config');
-        await setDoc(coleccionRef, {
+        await this.firestore.doc(`clients/${nombreRestaurante}/${coleccion}/_config`).set({
           _placeholder: true,
           fechaCreacion: new Date(),
           descripcion: `Colección ${coleccion} para ${nombreRestaurante}`
         });
       }
 
-      // Crear configuración inicial del restaurante en info
-      const configRef = doc(db, `clients/${nombreRestaurante}/info`, 'configuracion');
-      await setDoc(configRef, {
+      // Crear configuración inicial del restaurante en configuracion
+      await this.firestore.doc(`clients/${nombreRestaurante}/configuracion/restaurante`).set({
           notificaciones: {
             email: true,
             push: false,

@@ -1,16 +1,6 @@
 import { Injectable } from '@angular/core';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { AuthService } from './auth.service';
-import { 
-  getFirestore, 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  Timestamp,
-  orderBy,
-  limit
-} from 'firebase/firestore';
-import { getApp } from 'firebase/app';
 
 export interface DashboardStats {
   clientesTotal: number;
@@ -44,10 +34,25 @@ export class DashboardService {
   private readonly baseCollection = 'clients'; // Colección base estática
   private readonly formulariosCollection = 'Formularios'; // Colección de formularios estática
   
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private firestore: AngularFirestore
+  ) {}
 
   /**
-   * Obtener la ruta completa para los formularios basada en el restaurante actual (ARQUITECTURA CORRECTA)
+   * ESTRUCTURA FINAL: Obtener rutas para formularios organizados
+   */
+  private getFormulariosOrganizadosPath(nombreRestaurante: string): { usuarios: string, pedidos: string, reservas: string } {
+    return {
+      usuarios: `${this.baseCollection}/${nombreRestaurante}/formularios/usuarios/datos`,
+      pedidos: `${this.baseCollection}/${nombreRestaurante}/formularios/pedidos/datos`,
+      reservas: `${this.baseCollection}/${nombreRestaurante}/formularios/reservas/datos`
+    };
+  }
+
+  /**
+   * COMPATIBILIDAD: Obtener la ruta completa para los formularios basada en el restaurante actual
+   * @deprecated Usar getFormulariosOrganizadosPath en su lugar
    */
   private getFormulariosPath(): string {
     const restaurante = this.authService.obtenerRestauranteActual();
@@ -57,7 +62,7 @@ export class DashboardService {
     }
     
     const path = `${this.baseCollection}/${restaurante.nombre}/${this.formulariosCollection}`;
-    console.log(`📍 DashboardService (ARQUITECTURA CORRECTA): Usando ruta: ${path}`);
+    console.log(`📍 DashboardService (COMPATIBILIDAD): Usando ruta: ${path}`);
     return path;
   }
 
@@ -79,9 +84,6 @@ export class DashboardService {
     try {
       console.log('🔥 DashboardService.obtenerEstadisticas() - Obteniendo datos desde Firebase...');
       
-      const app = getApp();
-      const db = getFirestore(app);
-      
       // Fechas para filtros
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
@@ -90,9 +92,30 @@ export class DashboardService {
       const hace30Dias = new Date();
       hace30Dias.setDate(hace30Dias.getDate() - 30);
       
-      // Obtener todos los formularios
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const formulariosSnapshot = await getDocs(formulariosRef);
+      // ESTRUCTURA FINAL: Obtener formularios organizados por tipo
+      const nombreRestaurante = this.getRestauranteNombre();
+      const rutasFormularios = this.getFormulariosOrganizadosPath(nombreRestaurante);
+      
+      console.log('📍 DashboardService: Consultando formularios organizados...');
+      
+      // Obtener formularios de cada tipo
+      const [usuariosSnapshot, pedidosSnapshot, reservasSnapshot] = await Promise.all([
+        this.firestore.collection(rutasFormularios.usuarios).get().toPromise(),
+        this.firestore.collection(rutasFormularios.pedidos).get().toPromise(),
+        this.firestore.collection(rutasFormularios.reservas).get().toPromise()
+      ]);
+
+      console.log(`📊 Formularios encontrados: ${usuariosSnapshot?.size || 0} usuarios, ${pedidosSnapshot?.size || 0} pedidos, ${reservasSnapshot?.size || 0} reservas`);
+
+      // Si no hay datos en estructura final, usar compatibilidad
+      const totalFormulariosFinales = (usuariosSnapshot?.size || 0) + (pedidosSnapshot?.size || 0) + (reservasSnapshot?.size || 0);
+      
+      let formulariosSnapshot: any = null;
+      if (totalFormulariosFinales === 0) {
+        console.log('⚠️ No hay datos en estructura final, consultando compatibilidad...');
+        const formulariosRef = this.firestore.collection(this.getFormulariosPath());
+        formulariosSnapshot = await formulariosRef.get().toPromise();
+      }
       
       // Contadores
       const clientesUnicos = new Set<string>();
@@ -104,40 +127,42 @@ export class DashboardService {
       let reservasHoy = 0;
       let reservasPendientes = 0;
       
-      formulariosSnapshot.forEach(doc => {
-        const data = doc.data();
-        const docId = doc.id;
+      // ESTRUCTURA FINAL: Procesar formularios organizados
+      if (totalFormulariosFinales > 0) {
+        console.log('🏗️ Procesando ESTRUCTURA FINAL (formularios organizados)...');
         
-        // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1];
-          const typeForm = parts.slice(1, -1).join('_');
-          const timestamp = parseInt(parts[0]);
-          const fechaFormulario = new Date(timestamp);
+        // Procesar usuarios (clientes)
+        usuariosSnapshot?.forEach((doc: any) => {
+          const data = doc.data();
+          const docId = doc.id;
           
-          // Contar cliente único
-          clientesUnicos.add(chatId);
-          
-          // Clientes nuevos (últimos 30 días)
-          if (fechaFormulario >= hace30Dias) {
-            clientesNuevos++;
+          // Parsear ID: {timestamp}_{tipo}_{chatId}
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1];
+            const timestamp = parseInt(parts[0]);
+            const fechaFormulario = new Date(timestamp);
+            
+            // Contar cliente único
+            clientesUnicos.add(chatId);
+            
+            // Clientes nuevos (últimos 30 días)
+            if (fechaFormulario >= hace30Dias) {
+              clientesNuevos++;
+            }
           }
+        });
+        
+        // Procesar pedidos
+        pedidosSnapshot?.forEach((doc: any) => {
+          const data = doc.data();
+          const docId = doc.id;
           
-          // Procesar según tipo de formulario
-          if (typeForm.includes('reservas')) {
-            // Reservas de hoy
-            if (fechaFormulario >= hoy && fechaFormulario < new Date(hoy.getTime() + 86400000)) {
-              reservasHoy++;
-            }
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const timestamp = parseInt(parts[0]);
+            const fechaFormulario = new Date(timestamp);
             
-            // Reservas pendientes (asumiendo que están pendientes por defecto)
-            const status = data['status'] || 'pending';
-            if (status === 'pending') {
-              reservasPendientes++;
-            }
-            
-          } else if (typeForm.includes('pedidos')) {
             // Pedidos de hoy
             if (fechaFormulario >= hoy) {
               pedidosHoy++;
@@ -156,8 +181,90 @@ export class DashboardService {
               pedidosActivos++;
             }
           }
-        }
-      });
+        });
+        
+        // Procesar reservas
+        reservasSnapshot?.forEach((doc: any) => {
+          const data = doc.data();
+          const docId = doc.id;
+          
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const timestamp = parseInt(parts[0]);
+            const fechaFormulario = new Date(timestamp);
+            
+            // Reservas de hoy
+            if (fechaFormulario >= hoy && fechaFormulario < new Date(hoy.getTime() + 86400000)) {
+              reservasHoy++;
+            }
+            
+            // Reservas pendientes
+            const status = data['status'] || 'pending';
+            if (status === 'pending') {
+              reservasPendientes++;
+            }
+          }
+        });
+        
+      } else {
+        // COMPATIBILIDAD: Procesar estructura antigua
+        console.log('🔄 Procesando COMPATIBILIDAD (estructura antigua)...');
+        
+        formulariosSnapshot?.forEach((doc: any) => {
+          const data = doc.data();
+          const docId = doc.id;
+          
+          // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1];
+            const typeForm = parts.slice(1, -1).join('_');
+            const timestamp = parseInt(parts[0]);
+            const fechaFormulario = new Date(timestamp);
+            
+            // Contar cliente único
+            clientesUnicos.add(chatId);
+            
+            // Clientes nuevos (últimos 30 días)
+            if (fechaFormulario >= hace30Dias) {
+              clientesNuevos++;
+            }
+            
+            // Procesar según tipo de formulario
+            if (typeForm.includes('reservas')) {
+              // Reservas de hoy
+              if (fechaFormulario >= hoy && fechaFormulario < new Date(hoy.getTime() + 86400000)) {
+                reservasHoy++;
+              }
+              
+              // Reservas pendientes (asumiendo que están pendientes por defecto)
+              const status = data['status'] || 'pending';
+              if (status === 'pending') {
+                reservasPendientes++;
+              }
+              
+            } else if (typeForm.includes('pedidos')) {
+              // Pedidos de hoy
+              if (fechaFormulario >= hoy) {
+                pedidosHoy++;
+                // Simular ventas (valor aleatorio basado en tipo)
+                ventasHoy += Math.floor(Math.random() * 50000) + 15000;
+              }
+              
+              // Ventas del mes
+              if (fechaFormulario >= inicioMes) {
+                ventasMes += Math.floor(Math.random() * 50000) + 15000;
+              }
+              
+              // Pedidos activos
+              const status = data['status'] || 'pending';
+              if (['pending', 'accepted', 'inProcess', 'inDelivery'].includes(status)) {
+                pedidosActivos++;
+              }
+            }
+          }
+        });
+      }
       
       const stats: DashboardStats = {
         clientesTotal: clientesUnicos.size,
@@ -200,8 +307,6 @@ export class DashboardService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
       const nombreRestaurante = restauranteActual.nombre;
       
       // Crear array de últimos 7 días
@@ -226,10 +331,10 @@ export class DashboardService {
       hace7Dias.setHours(0, 0, 0, 0);
       
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
-      const pedidosRef = collection(db, `${this.baseCollection}/${nombreRestaurante}/pedidos`);
-      const pedidosSnapshot = await getDocs(pedidosRef);
+      const pedidosRef = this.firestore.collection(`${this.baseCollection}/${nombreRestaurante}/pedidos`);
+      const pedidosSnapshot = await pedidosRef.get().toPromise();
       
-      pedidosSnapshot.forEach(doc => {
+      pedidosSnapshot?.forEach((doc: any) => {
         const data = doc.data();
         if (data['fechaCreacion'] && data['statusBooking'] !== 'rejected') {
           const fechaPedido = new Date(data['fechaCreacion']);
@@ -268,8 +373,6 @@ export class DashboardService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
       const nombreRestaurante = restauranteActual.nombre;
       
       // Mapa para acumular ventas por producto
@@ -280,10 +383,10 @@ export class DashboardService {
       hace30Dias.setDate(hace30Dias.getDate() - 30);
       
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
-      const pedidosRef = collection(db, `${this.baseCollection}/${nombreRestaurante}/pedidos`);
-      const pedidosSnapshot = await getDocs(pedidosRef);
+      const pedidosRef = this.firestore.collection(`${this.baseCollection}/${nombreRestaurante}/pedidos`);
+      const pedidosSnapshot = await pedidosRef.get().toPromise();
       
-      pedidosSnapshot.forEach(doc => {
+      pedidosSnapshot?.forEach((doc: any) => {
         const pedido = doc.data();
         
         if (pedido['fechaCreacion'] && pedido['statusBooking'] !== 'rejected') {
@@ -353,13 +456,11 @@ export class DashboardService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
       const nombreRestaurante = restauranteActual.nombre;
       
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
-      const pedidosRef = collection(db, `${this.baseCollection}/${nombreRestaurante}/pedidos`);
-      const pedidosSnapshot = await getDocs(pedidosRef);
+      const pedidosRef = this.firestore.collection(`${this.baseCollection}/${nombreRestaurante}/pedidos`);
+      const pedidosSnapshot = await pedidosRef.get().toPromise();
       
       const distribucion = {
         delivery: 0,
@@ -369,7 +470,7 @@ export class DashboardService {
       
       let totalPedidos = 0;
       
-      pedidosSnapshot.forEach(doc => {
+      pedidosSnapshot?.forEach((doc: any) => {
         const data = doc.data();
         if (data['orderType']) {
           distribucion[data['orderType'] as keyof typeof distribucion]++;
@@ -416,18 +517,16 @@ export class DashboardService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
       const nombreRestaurante = restauranteActual.nombre;
       
       const actividades: any[] = [];
       
       // Obtener últimos pedidos
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
-      const pedidosRef = collection(db, `${this.baseCollection}/${nombreRestaurante}/pedidos`);
-      const pedidosSnapshot = await getDocs(query(pedidosRef, orderBy('fechaCreacion', 'desc'), limit(5)));
+      const pedidosRef = this.firestore.collection(`${this.baseCollection}/${nombreRestaurante}/pedidos`);
+      const pedidosSnapshot = await pedidosRef.ref.orderBy('fechaCreacion', 'desc').limit(5).get();
       
-      pedidosSnapshot.forEach(doc => {
+      pedidosSnapshot.forEach((doc: any) => {
         const data = doc.data();
         actividades.push({
           tipo: 'pedido',
@@ -440,10 +539,10 @@ export class DashboardService {
       
       // Obtener últimas reservas
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
-      const reservasRef = collection(db, `${this.baseCollection}/${nombreRestaurante}/reservas`);
-      const reservasSnapshot = await getDocs(query(reservasRef, orderBy('creation', 'desc'), limit(5)));
+      const reservasRef = this.firestore.collection(`${this.baseCollection}/${nombreRestaurante}/reservas`);
+      const reservasSnapshot = await reservasRef.ref.orderBy('creation', 'desc').limit(5).get();
       
-      reservasSnapshot.forEach(doc => {
+      reservasSnapshot.forEach((doc: any) => {
         const data = doc.data();
         actividades.push({
           tipo: 'reserva',

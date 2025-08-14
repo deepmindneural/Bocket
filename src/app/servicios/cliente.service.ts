@@ -5,8 +5,6 @@ import { Cliente } from '../modelos';
 import { AuthService } from './auth.service';
 
 // Import Firebase SDK nativo para operaciones directas
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, addDoc } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
 
 @Injectable({
   providedIn: 'root'
@@ -23,17 +21,26 @@ export class ClienteService {
   ) {}
 
   /**
-   * ARQUITECTURA CORRECTA: Ruta para clientes por nombre de restaurante
+   * ARQUITECTURA CORRECTA: Ruta para users por nombre de restaurante
    */
-  private getClientesPath(nombreRestaurante: string): string {
-    const path = `${this.baseCollection}/${nombreRestaurante}/clientes`;
+  private getUsersPath(nombreRestaurante: string): string {
+    const path = `${this.baseCollection}/${nombreRestaurante}/users`;
     console.log(`📍 ClienteService (ARQUITECTURA CORRECTA): Usando ruta: ${path}`);
     return path;
   }
 
   /**
+   * ESTRUCTURA FINAL: Obtener la ruta para formularios de users organizados
+   */
+  private getFormulariosUsersPath(nombreRestaurante: string): string {
+    const path = `${this.baseCollection}/${nombreRestaurante}/formularios/users/datos`;
+    console.log(`📍 ClienteService (ESTRUCTURA FINAL): Usando ruta formularios users: ${path}`);
+    return path;
+  }
+
+  /**
    * COMPATIBILIDAD: Obtener la ruta completa para los formularios (arquitectura multi-tenant unificada)
-   * @deprecated Usar getClientesPath en su lugar
+   * @deprecated Usar getFormulariosUsersPath en su lugar
    */
   private getFormulariosPath(): string {
     const path = `${this.baseCollection}/${this.businessId}/${this.formulariosCollection}`;
@@ -68,40 +75,36 @@ export class ClienteService {
   }
 
   /**
-   * Obtener todos los clientes (NUEVA ARQUITECTURA)
-   * Los clientes se almacenan en /clients/{restauranteId}/data/clientes/
+   * Obtener todos los users (NUEVA ARQUITECTURA)
+   * Los users se almacenan en /clients/{restauranteId}/users/
    */
   async obtenerTodos(): Promise<Cliente[]> {
     try {
-      console.log('🔥 ClienteService.obtenerTodos() - Iniciando obtención de clientes con ARQUITECTURA CORRECTA...');
+      console.log('🔥 ClienteService.obtenerTodos() - Iniciando obtención de users con ARQUITECTURA CORRECTA...');
       
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // ARQUITECTURA CORRECTA: Obtener clientes de /clients/{nombreRestaurante}/Formularios/clientes/
-      console.log(`📍 Consultando ARQUITECTURA CORRECTA: ${this.getClientesPath(nombreRestaurante)}`);
+      // ARQUITECTURA CORRECTA: Obtener users usando AngularFirestore
+      console.log(`📍 Consultando ARQUITECTURA CORRECTA: ${this.getUsersPath(nombreRestaurante)}`);
       
       let clientes: Cliente[] = [];
       
       try {
-        const clientesRef = collection(db, this.getClientesPath(nombreRestaurante));
-        const snapshot = await getDocs(clientesRef);
+        const snapshot = await this.firestore.collection(this.getUsersPath(nombreRestaurante)).get().toPromise();
         
-        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot.size}`);
+        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot?.size || 0}`);
         
-        snapshot.forEach(doc => {
+        snapshot?.forEach(doc => {
           const data = doc.data();
           const cliente = this.mapearDocumentoACliente(doc.id, data);
           if (cliente) {
             clientes.push(cliente);
-            console.log(`✅ Cliente de arquitectura correcta: ${cliente.name} (${cliente.id})`);
+            console.log(`✅ Usuario de arquitectura correcta: ${cliente.name} (${cliente.id})`);
           }
         });
         
         if (clientes.length > 0) {
-          console.log(`✅ ClienteService: ${clientes.length} clientes encontrados en ARQUITECTURA CORRECTA`);
+          console.log(`✅ ClienteService: ${clientes.length} users encontrados en ARQUITECTURA CORRECTA`);
           return clientes;
         }
       } catch (error) {
@@ -111,19 +114,18 @@ export class ClienteService {
       // COMPATIBILIDAD: Si no hay datos en arquitectura correcta, consultar estructura antigua
       console.log(`📍 Consultando COMPATIBILIDAD: ${this.getFormulariosPath()}`);
       
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const clientesQuery = query(formulariosRef, where('restauranteId', '==', restauranteId));
-      
       console.log(`📡 Realizando consulta de compatibilidad para restaurante: ${restauranteId}...`);
-      const snapshot = await getDocs(clientesQuery);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath(), ref => 
+        ref.where('restauranteId', '==', restauranteId)
+      ).get().toPromise();
       
-      console.log(`📊 COMPATIBILIDAD - Total documentos encontrados: ${snapshot.size}`);
+      console.log(`📊 COMPATIBILIDAD - Total documentos encontrados: ${snapshot?.size || 0}`);
       
-      if (snapshot.empty) {
+      if (snapshot && snapshot.empty) {
         console.log('⚠️ No se encontraron documentos en ninguna estructura');
         console.log('💡 Verificar:');
         console.log('   1. Que los datos se estén guardando correctamente');
-        console.log('   2. Nueva ruta: /clients/{restauranteId}/data/clientes');
+        console.log('   2. Nueva ruta: /clients/{restauranteId}/users');
         console.log('   3. Ruta antigua: /clients/worldfood/Formularios');
         console.log('   4. Que haya autenticación correcta en Firebase');
         return [];
@@ -134,8 +136,8 @@ export class ClienteService {
       let documentosProcesados = 0;
       let clientesExtraidos = 0;
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      snapshot?.forEach(doc => {
+        const data = doc.data() as any;
         const docId = doc.id;
         documentosProcesados++;
         
@@ -426,16 +428,13 @@ export class ClienteService {
       console.log(`🔍 ClienteService.obtenerPorId() - Buscando cliente: ${id}`);
       
       const nombreRestaurante = this.getRestauranteActualNombre();
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // ARQUITECTURA CORRECTA: Buscar directamente en /clients/{nombreRestaurante}/Formularios/clientes/
+      // ARQUITECTURA CORRECTA: Buscar directamente usando AngularFirestore
       try {
-        const clientesPath = this.getClientesPath(nombreRestaurante);
-        const clienteDocRef = doc(db, clientesPath, id);
-        const docSnap = await getDoc(clienteDocRef);
+        const usersPath = this.getUsersPath(nombreRestaurante);
+        const usuarioDocRef = this.firestore.doc(`${usersPath}/${id}`);
+        const docSnap = await usuarioDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
+        if (docSnap && docSnap.exists) {
           const data = docSnap.data();
           const cliente = this.mapearDocumentoACliente(id, data);
           if (cliente) {
@@ -471,7 +470,7 @@ export class ClienteService {
    */
   async crear(cliente: Partial<Cliente>): Promise<Cliente> {
     try {
-      console.log('🔥 ClienteService.crear() - Creando cliente con ARQUITECTURA CORRECTA...');
+      console.log('🔥 ClienteService.crear() - Creando usuario con ARQUITECTURA CORRECTA...');
       console.log('📝 Datos recibidos:', cliente);
 
       const nombreRestaurante = this.getRestauranteActualNombre();
@@ -503,20 +502,41 @@ export class ClienteService {
         }
       };
 
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // ARQUITECTURA CORRECTA: Guardar en /clients/{nombreRestaurante}/Formularios/clientes/
-      const clientesPath = this.getClientesPath(nombreRestaurante);
+      // ARQUITECTURA CORRECTA: Guardar en /clients/{nombreRestaurante}/users/ usando AngularFirestore
+      const usersPath = this.getUsersPath(nombreRestaurante);
       const clienteId = nuevoCliente.id!; // Using non-null assertion since we guarantee id exists above
-      const clienteDocRef = doc(db, clientesPath, clienteId);
+      const usuarioDocRef = this.firestore.doc(`${usersPath}/${clienteId}`);
       
-      console.log(`📍 ARQUITECTURA CORRECTA - Guardando en: ${this.getClientesPath(nombreRestaurante)}/${nuevoCliente.id}`);
-      await setDoc(clienteDocRef, nuevoCliente);
+      console.log(`📍 ARQUITECTURA CORRECTA - Guardando en: ${this.getUsersPath(nombreRestaurante)}/${nuevoCliente.id}`);
+      await usuarioDocRef.set(nuevoCliente);
       
+      // ESTRUCTURA FINAL: También crear en formularios de users organizados
+      const rutaFormulariosUsers = this.getFormulariosUsersPath(nombreRestaurante);
+      const timestamp = Date.now();
+      const docIdFormulario = `${timestamp}_usuario_${nuevoCliente.id}`;
+      
+      const datosFormularioUsuario = {
+        id: docIdFormulario,
+        tipoFormulario: 'users',
+        restauranteSlug: nombreRestaurante,
+        restauranteId: restauranteId,
+        chatId: nuevoCliente.id,
+        timestamp: timestamp,
+        nombre: nuevoCliente.name,
+        email: nuevoCliente.email || '',
+        telefono: nuevoCliente.whatsAppName || '',
+        tipoCliente: nuevoCliente.labels?.includes('vip') ? 'VIP' : 'Regular',
+        labels: nuevoCliente.labels,
+        activo: true,
+        fechaCreacion: new Date().toISOString(),
+        source: 'manual_creation'
+      };
+
+      const clienteFormularioRef = this.firestore.doc(`${rutaFormulariosUsers}/${docIdFormulario}`);
+      await clienteFormularioRef.set(datosFormularioUsuario);
+
       // COMPATIBILIDAD: También crear en estructura antigua para migración gradual
       const rutaCompatibilidad = this.getFormulariosPath();
-      const timestamp = Date.now();
       const docIdCompatibilidad = `${timestamp}_cliente_${nuevoCliente.id}`;
       
       const datosFormularioCompatibilidad = {
@@ -533,11 +553,12 @@ export class ClienteService {
         source: 'manual_creation'
       };
 
-      const clienteCompatibilidadRef = doc(db, rutaCompatibilidad, docIdCompatibilidad);
-      await setDoc(clienteCompatibilidadRef, datosFormularioCompatibilidad);
+      const clienteCompatibilidadRef = this.firestore.doc(`${rutaCompatibilidad}/${docIdCompatibilidad}`);
+      await clienteCompatibilidadRef.set(datosFormularioCompatibilidad);
       
-      console.log('✅ Cliente creado exitosamente en AMBAS ESTRUCTURAS');
-      console.log(`   🏗️ ARQUITECTURA CORRECTA: ${this.getClientesPath(nombreRestaurante)}/${nuevoCliente.id}`);
+      console.log('✅ Usuario creado exitosamente en TODAS LAS ESTRUCTURAS');
+      console.log(`   🏗️ ARQUITECTURA CORRECTA: ${this.getUsersPath(nombreRestaurante)}/${nuevoCliente.id}`);
+      console.log(`   📋 ESTRUCTURA FINAL: ${rutaFormulariosUsers}/${docIdFormulario}`);
       console.log(`   🔄 COMPATIBILIDAD: ${rutaCompatibilidad}/${docIdCompatibilidad}`);
       console.log(`   👤 Nombre: ${nuevoCliente.name}`);
       
@@ -554,22 +575,21 @@ export class ClienteService {
   }
 
   /**
-   * Actualizar cliente existente (NUEVA ARQUITECTURA)
+   * Actualizar usuario existente (NUEVA ARQUITECTURA)
    */
   async actualizar(id: string, cambios: Partial<Cliente>): Promise<Cliente> {
     try {
-      console.log('🔥 ClienteService.actualizar() - Actualizando cliente con ARQUITECTURA CORRECTA:', id);
+      console.log('🔥 ClienteService.actualizar() - Actualizando usuario con ARQUITECTURA CORRECTA:', id);
       console.log('📝 Cambios solicitados:', cambios);
 
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
+      // Usar AngularFirestore en lugar de Firebase SDK nativo
       
-      // Obtener cliente actual
+      // Obtener usuario actual
       const clienteActual = await this.obtenerPorId(id);
       if (!clienteActual) {
-        throw new Error(`No se encontró cliente con ID: ${id}`);
+        throw new Error(`No se encontró usuario con ID: ${id}`);
       }
       
       // Crear cliente actualizado
@@ -581,15 +601,15 @@ export class ClienteService {
       
       let actualizado = false;
       
-      // ARQUITECTURA CORRECTA: Actualizar en /clients/{nombreRestaurante}/Formularios/clientes/
+      // ARQUITECTURA CORRECTA: Actualizar usando AngularFirestore
       try {
-        const clientesPath = this.getClientesPath(nombreRestaurante);
-        const clienteDocRef = doc(db, clientesPath, id);
-        const docSnap = await getDoc(clienteDocRef);
+        const usersPath = this.getUsersPath(nombreRestaurante);
+        const usuarioDocRef = this.firestore.doc(`${usersPath}/${id}`);
+        const docSnap = await usuarioDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await setDoc(clienteDocRef, clienteActualizado);
-          console.log(`✅ Cliente actualizado en ARQUITECTURA CORRECTA`);
+        if (docSnap && docSnap.exists) {
+          await usuarioDocRef.set(clienteActualizado);
+          console.log(`✅ Usuario actualizado en ARQUITECTURA CORRECTA`);
           actualizado = true;
         }
       } catch (error) {
@@ -598,12 +618,11 @@ export class ClienteService {
       
       // COMPATIBILIDAD: Actualizar también en estructura antigua si existe
       try {
-        const formulariosRef = collection(db, this.getFormulariosPath());
-        const snapshot = await getDocs(formulariosRef);
+        const snapshot = await this.firestore.collection(this.getFormulariosPath()).get().toPromise();
         
         let documentoCompatibilidad: any = null;
         
-        snapshot.forEach(doc => {
+        snapshot?.forEach(doc => {
           const docId = doc.id;
           const parts = docId.split('_');
           if (parts.length >= 3) {
@@ -641,8 +660,8 @@ export class ClienteService {
           }
 
           const formulariosPath = this.getFormulariosPath();
-          const clienteCompatibilidadRef = doc(db, formulariosPath, documentoCompatibilidad.id);
-          await setDoc(clienteCompatibilidadRef, datosActualizados);
+          const clienteCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${documentoCompatibilidad.id}`);
+          await clienteCompatibilidadRef.set(datosActualizados);
           console.log(`✅ COMPATIBILIDAD - Cliente actualizado en estructura antigua`);
           actualizado = true;
         }
@@ -651,10 +670,10 @@ export class ClienteService {
       }
       
       if (!actualizado) {
-        throw new Error('No se pudo actualizar el cliente en ninguna estructura');
+        throw new Error('No se pudo actualizar el usuario en ninguna estructura');
       }
       
-      console.log('✅ Cliente actualizado exitosamente en todas las estructuras disponibles');
+      console.log('✅ Usuario actualizado exitosamente en todas las estructuras disponibles');
       return clienteActualizado;
     } catch (error) {
       console.error('❌ Error actualizando cliente:', error);
@@ -663,28 +682,27 @@ export class ClienteService {
   }
 
   /**
-   * Eliminar cliente (NUEVA ARQUITECTURA)
+   * Eliminar usuario (NUEVA ARQUITECTURA)
    */
   async eliminar(id: string): Promise<void> {
     try {
-      console.log('🔥 ClienteService.eliminar() - Eliminando cliente con ARQUITECTURA CORRECTA:', id);
+      console.log('🔥 ClienteService.eliminar() - Eliminando usuario con ARQUITECTURA CORRECTA:', id);
 
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
+      // Usar AngularFirestore para eliminar
       
       let eliminado = false;
       
-      // ARQUITECTURA CORRECTA: Eliminar de /clients/{nombreRestaurante}/Formularios/clientes/
+      // ARQUITECTURA CORRECTA: Eliminar usando AngularFirestore
       try {
-        const clientesPath = this.getClientesPath(nombreRestaurante);
-        const clienteDocRef = doc(db, clientesPath, id);
-        const docSnap = await getDoc(clienteDocRef);
+        const usersPath = this.getUsersPath(nombreRestaurante);
+        const usuarioDocRef = this.firestore.doc(`${usersPath}/${id}`);
+        const docSnap = await usuarioDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await deleteDoc(clienteDocRef);
-          console.log(`✅ Cliente eliminado de ARQUITECTURA CORRECTA`);
+        if (docSnap && docSnap.exists) {
+          await usuarioDocRef.delete();
+          console.log(`✅ Usuario eliminado de ARQUITECTURA CORRECTA`);
           eliminado = true;
         }
       } catch (error) {
@@ -693,12 +711,11 @@ export class ClienteService {
       
       // COMPATIBILIDAD: Eliminar también de estructura antigua
       try {
-        const formulariosRef = collection(db, this.getFormulariosPath());
-        const snapshot = await getDocs(formulariosRef);
+        const snapshot = await this.firestore.collection(this.getFormulariosPath()).get().toPromise();
         
         const documentosAEliminar: string[] = [];
         
-        snapshot.forEach(doc => {
+        snapshot?.forEach(doc => {
           const docId = doc.id;
           const parts = docId.split('_');
           if (parts.length >= 3) {
@@ -712,8 +729,8 @@ export class ClienteService {
         // Eliminar todos los documentos asociados en estructura antigua
         for (const docId of documentosAEliminar) {
           const formulariosPath = this.getFormulariosPath();
-          const clienteDocRef = doc(db, formulariosPath, docId);
-          await deleteDoc(clienteDocRef);
+          const usuarioDocRef = this.firestore.doc(`${formulariosPath}/${docId}`);
+          await usuarioDocRef.delete();
           console.log(`✅ COMPATIBILIDAD - Documento eliminado: ${docId}`);
           eliminado = true;
         }
@@ -722,10 +739,10 @@ export class ClienteService {
       }
       
       if (!eliminado) {
-        throw new Error(`No se encontró cliente para eliminar con ID: ${id}`);
+        throw new Error(`No se encontró usuario para eliminar con ID: ${id}`);
       }
       
-      console.log(`✅ Cliente eliminado completamente de todas las estructuras: ${id}`);
+      console.log(`✅ Usuario eliminado completamente de todas las estructuras: ${id}`);
     } catch (error) {
       console.error('❌ Error eliminando cliente:', error);
       throw error;
@@ -737,30 +754,30 @@ export class ClienteService {
    */
   async obtenerPorTipoFormulario(tipoFormulario: string): Promise<Cliente[]> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const q = query(formulariosRef, where('typeForm', '==', tipoFormulario));
-      const snapshot = await getDocs(q);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath(), ref => 
+        ref.where('typeForm', '==', tipoFormulario)
+      ).get().toPromise();
       
       const clientes: Cliente[] = [];
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const docId = doc.id;
-        const parts = docId.split('_');
-        
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1];
-          const typeForm = parts.slice(1, -1).join('_');
-          const timestamp = parseInt(parts[0]);
+      if (snapshot) {
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          const docId = doc.id;
+          const parts = docId.split('_');
           
-          const clienteInfo = this.extraerInfoCliente(data, typeForm, chatId, timestamp);
-          if (clienteInfo) {
-            clientes.push(clienteInfo);
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1];
+            const typeForm = parts.slice(1, -1).join('_');
+            const timestamp = parseInt(parts[0]);
+            
+            const clienteInfo = this.extraerInfoCliente(data, typeForm, chatId, timestamp);
+            if (clienteInfo) {
+              clientes.push(clienteInfo);
+            }
           }
-        }
-      });
+        });
+      }
       
       return clientes;
     } catch (error) {
@@ -811,23 +828,22 @@ export class ClienteService {
       console.log('⏸️ Inactivando cliente:', id);
       
       // Buscar el documento del formulario
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const snapshot = await getDocs(formulariosRef);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath()).get().toPromise();
       
       let documentoEncontrado: any = null;
       
-      snapshot.forEach(doc => {
-        const docId = doc.id;
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1];
-          if (chatId === id) {
-            documentoEncontrado = { id: docId, data: doc.data() };
+      if (snapshot) {
+        snapshot.forEach(doc => {
+          const docId = doc.id;
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1];
+            if (chatId === id) {
+              documentoEncontrado = { id: docId, data: doc.data() };
+            }
           }
-        }
-      });
+        });
+      }
 
       if (!documentoEncontrado) {
         throw new Error(`No se encontró formulario para el cliente con ID: ${id}`);
@@ -840,8 +856,7 @@ export class ClienteService {
       datosActualizados.lastUpdate = new Date().toISOString();
 
       const formulariosPath = this.getFormulariosPath();
-      const clienteDocRef = doc(db, formulariosPath, documentoEncontrado.id);
-      await setDoc(clienteDocRef, datosActualizados);
+      await this.firestore.doc(`${formulariosPath}/${documentoEncontrado.id}`).set(datosActualizados);
       
       console.log('✅ Cliente inactivado exitosamente');
       
@@ -865,23 +880,22 @@ export class ClienteService {
       console.log('▶️ Reactivando cliente:', id);
       
       // Buscar el documento del formulario
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const snapshot = await getDocs(formulariosRef);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath()).get().toPromise();
       
       let documentoEncontrado: any = null;
       
-      snapshot.forEach(doc => {
-        const docId = doc.id;
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1];
-          if (chatId === id) {
-            documentoEncontrado = { id: docId, data: doc.data() };
+      if (snapshot) {
+        snapshot.forEach(doc => {
+          const docId = doc.id;
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1];
+            if (chatId === id) {
+              documentoEncontrado = { id: docId, data: doc.data() };
+            }
           }
-        }
-      });
+        });
+      }
 
       if (!documentoEncontrado) {
         throw new Error(`No se encontró formulario para el cliente con ID: ${id}`);
@@ -899,8 +913,7 @@ export class ClienteService {
       }
 
       const formulariosPath = this.getFormulariosPath();
-      const clienteDocRef = doc(db, formulariosPath, documentoEncontrado.id);
-      await setDoc(clienteDocRef, datosActualizados);
+      await this.firestore.doc(`${formulariosPath}/${documentoEncontrado.id}`).set(datosActualizados);
       
       console.log('✅ Cliente reactivado exitosamente');
       

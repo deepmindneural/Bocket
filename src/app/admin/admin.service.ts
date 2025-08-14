@@ -1,9 +1,7 @@
 import { Injectable } from '@angular/core';
-// Import Firebase SDK nativo para evitar problemas de inyección
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, writeBatch } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, updateProfile, signOut, signInWithEmailAndPassword } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
+import { AngularFireStorage } from '@angular/fire/compat/storage';
 // Import AuthService to access working Firestore instance
 import { AuthService } from '../servicios/auth.service';
 
@@ -36,7 +34,10 @@ export class AdminService {
   private readonly baseCollection = 'clients'; // Colección base
 
   constructor(
-    private authService: AuthService
+    private authService: AuthService,
+    private firestore: AngularFirestore,
+    private auth: AngularFireAuth,
+    private storage: AngularFireStorage
   ) {}
 
   /**
@@ -71,47 +72,26 @@ export class AdminService {
     try {
       console.log('🔥 AdminService: Obteniendo restaurantes (NUEVA ARQUITECTURA)...');
       
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // NUEVA ARQUITECTURA: Buscar en /clients/{restauranteId}/info/restaurante
-      const clientsRef = collection(db, this.baseCollection);
-      const snapshot = await getDocs(clientsRef);
+      // Buscar en estructura antigua de Formularios por compatibilidad
+      const snapshot = await this.firestore.collection('clients/worldfood/Formularios', ref => 
+        ref.where('typeForm', '==', 'restaurante')
+      ).get().toPromise();
       
       const restaurantes: RestauranteFirestore[] = [];
       
-      // Para cada posible restaurante, verificar si tiene info
-      for (const clientDoc of snapshot.docs) {
-        const restauranteId = clientDoc.id;
-        
-        try {
-          // Verificar si existe el documento de info del restaurante
-          const infoPath = this.getRestauranteInfoPath(restauranteId);
-          const infoRef = doc(db, infoPath, 'restaurante');
-          const infoSnap = await getDoc(infoRef);
+      if (snapshot && !snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as any;
+          restaurantes.push({
+            id: data.restauranteId || doc.id,
+            ...data
+          } as RestauranteFirestore);
           
-          if (infoSnap.exists()) {
-            const data = infoSnap.data();
-            restaurantes.push({
-              id: restauranteId,
-              ...data
-            } as RestauranteFirestore);
-            
-            console.log(`✅ Restaurante encontrado: ${data['nombre']} (${restauranteId})`);
-          }
-        } catch (error) {
-          console.log(`⚠️ Saltando ${restauranteId}: No es un restaurante válido`);
-        }
+          console.log(`✅ Restaurante encontrado: ${data.nombre || doc.id}`);
+        });
       }
       
-      console.log(`✅ AdminService: ${restaurantes.length} restaurantes encontrados en nueva arquitectura`);
-      
-      // COMPATIBILIDAD: Si no hay restaurantes en nueva arquitectura, buscar en la antigua
-      if (restaurantes.length === 0) {
-        console.log('🔄 No hay restaurantes en nueva arquitectura, buscando en estructura antigua...');
-        return await this.obtenerRestaurantesEstructuraAntigua();
-      }
-      
+      console.log(`✅ AdminService: ${restaurantes.length} restaurantes encontrados`);
       return restaurantes;
     } catch (error) {
       console.error('❌ Error obteniendo restaurantes:', error);
@@ -122,17 +102,18 @@ export class AdminService {
   // COMPATIBILIDAD: Método para leer estructura antigua
   private async obtenerRestaurantesEstructuraAntigua(): Promise<RestauranteFirestore[]> {
     try {
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const restaurantesQuery = query(formulariosRef, where('typeForm', '==', 'restaurante'));
-      const snapshot = await getDocs(restaurantesQuery);
+      const snapshot = await this.firestore.collection('clients/worldfood/Formularios', ref => 
+        ref.where('typeForm', '==', 'restaurante')
+      ).get().toPromise();
       
       const restaurantes: RestauranteFirestore[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        restaurantes.push({ id: data['restauranteId'] || doc.id, ...data } as RestauranteFirestore);
-      });
+      
+      if (snapshot && !snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as any;
+          restaurantes.push({ id: data['restauranteId'] || doc.id, ...data } as RestauranteFirestore);
+        });
+      }
       
       console.log(`✅ AdminService: ${restaurantes.length} restaurantes encontrados en estructura antigua`);
       return restaurantes;
@@ -147,17 +128,17 @@ export class AdminService {
     try {
       console.log('🔥 AdminService: Obteniendo todos los usuarios...');
       
-      // Usar Firebase SDK nativo
-      const app = getApp();
-      const db = getFirestore(app);
-      const usuariosRef = collection(db, 'usuarios');
-      const snapshot = await getDocs(usuariosRef);
+      // Buscar en adminUsers que es donde están los usuarios reales
+      const snapshot = await this.firestore.collection('adminUsers').get().toPromise();
       
       const usuarios: any[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        usuarios.push({ id: doc.id, ...data });
-      });
+      
+      if (snapshot && !snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as any;
+          usuarios.push({ id: doc.id, ...data });
+        });
+      }
       
       console.log(`✅ AdminService: ${usuarios.length} usuarios encontrados`);
       return usuarios;
@@ -172,33 +153,45 @@ export class AdminService {
     try {
       console.log('🔥 AdminService: Obteniendo todos los pedidos...');
       
-      // Usar Firebase SDK nativo
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // IDs conocidos de restaurantes
-      const restaurantesIds = ['rest_donpepe_001', 'rest_marinacafe_002'];
+      // Obtener todos los restaurantes primero
+      const restaurantes = await this.obtenerTodosRestaurantes();
       const todosPedidos: any[] = [];
       
-      for (const restauranteId of restaurantesIds) {
+      for (const restaurante of restaurantes) {
         try {
-          console.log(`🔍 Consultando pedidos de ${restauranteId}...`);
-          const pedidosRef = collection(db, `restaurantes/${restauranteId}/pedidos`);
-          const snapshot = await getDocs(pedidosRef);
+          console.log(`🔍 Consultando pedidos de ${restaurante.nombre}...`);
           
-          console.log(`📊 ${restauranteId}: ${snapshot.size} pedidos encontrados`);
+          // Los pedidos podrían estar en diferentes estructuras, probar ambas
+          const paths = [
+            `clients/${restaurante.slug}/pedidos`,
+            `clients/worldfood/pedidos/${restaurante.id}`,
+            `restaurantes/${restaurante.id}/pedidos`
+          ];
           
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            todosPedidos.push({ 
-              id: doc.id, 
-              restauranteId: restauranteId,
-              restauranteNombre: restauranteId === 'rest_donpepe_001' ? 'Don Pepe Restaurant' : 'Marina Café & Bistro',
-              ...data 
-            });
-          });
+          for (const path of paths) {
+            try {
+              const snapshot = await this.firestore.collection(path).get().toPromise();
+              
+              if (snapshot && !snapshot.empty) {
+                console.log(`📊 ${restaurante.nombre}: ${snapshot.size} pedidos encontrados en ${path}`);
+                
+                snapshot.docs.forEach(doc => {
+                  const data = doc.data() as any;
+                  todosPedidos.push({ 
+                    id: doc.id, 
+                    restauranteId: restaurante.id,
+                    restauranteNombre: restaurante.nombre,
+                    ...data 
+                  });
+                });
+                break; // Si encontramos pedidos en una estructura, no seguir buscando
+              }
+            } catch (pathError) {
+              console.log(`⚠️ Ruta ${path} no disponible`);
+            }
+          }
         } catch (error) {
-          console.error(`❌ Error obteniendo pedidos del restaurante ${restauranteId}:`, error);
+          console.error(`❌ Error obteniendo pedidos del restaurante ${restaurante.nombre}:`, error);
         }
       }
       
@@ -215,114 +208,113 @@ export class AdminService {
     try {
       console.log('🔥 AdminService: Obteniendo todos los clientes desde formularios...');
       
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const snapshot = await getDocs(formulariosRef);
+      const snapshot = await this.firestore.collection('clients/worldfood/Formularios').get().toPromise();
       
       const clientesMap = new Map<string, any>();
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const docId = doc.id;
-        
-        // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1]; // Chat ID
-          const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
-          const timestamp = parseInt(parts[0]); // Timestamp
+      if (snapshot && !snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as any;
+          const docId = doc.id;
           
-          // Extraer información del cliente del formulario
-          let nombre = '';
-          let email = '';
-          let tipoInteraccion = '';
-          
-          // Extraer nombre según el tipo de formulario
-          if (typeForm.includes('reservas particulares') || typeForm.includes('reservas eventos')) {
-            const nombreField = Object.keys(data).find(key => 
-              key.toLowerCase().includes('nombre') && key.toLowerCase().includes('apellido')
-            );
-            if (nombreField) {
-              nombre = data[nombreField] || '';
-            }
-            tipoInteraccion = typeForm.includes('eventos') ? 'evento' : 'reserva';
+          // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1]; // Chat ID
+            const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
+            const timestamp = parseInt(parts[0]); // Timestamp
             
-            // Email para eventos
-            if (typeForm.includes('eventos')) {
-              const emailField = Object.keys(data).find(key => 
-                key.toLowerCase().includes('email')
-              );
-              if (emailField) {
-                email = data[emailField] || '';
-              }
-            }
-          } else if (typeForm.includes('hablar con una asesora')) {
-            const nombreField = Object.keys(data).find(key => 
-              key.toLowerCase().includes('nombre')
-            );
-            if (nombreField) {
-              nombre = data[nombreField] || '';
-            }
-            tipoInteraccion = 'asesoria';
-          }
+            // Extraer información del cliente del formulario
+            let nombre = '';
+            let email = '';
+            let tipoInteraccion = '';
           
-          if (nombre && chatId) {
-            // Si ya existe un cliente con este chatId, actualizar información
-            if (clientesMap.has(chatId)) {
-              const clienteExistente = clientesMap.get(chatId);
-              // Mantener la información más reciente
-              if (timestamp > parseInt(clienteExistente.creation || '0')) {
+            // Extraer nombre según el tipo de formulario
+            if (typeForm.includes('reservas particulares') || typeForm.includes('reservas eventos')) {
+              const nombreField = Object.keys(data).find(key => 
+                key.toLowerCase().includes('nombre') && key.toLowerCase().includes('apellido')
+              );
+              if (nombreField) {
+                nombre = data[nombreField] || '';
+              }
+              tipoInteraccion = typeForm.includes('eventos') ? 'evento' : 'reserva';
+              
+              // Email para eventos
+              if (typeForm.includes('eventos')) {
+                const emailField = Object.keys(data).find(key => 
+                  key.toLowerCase().includes('email')
+                );
+                if (emailField) {
+                  email = data[emailField] || '';
+                }
+              }
+            } else if (typeForm.includes('hablar con una asesora')) {
+              const nombreField = Object.keys(data).find(key => 
+                key.toLowerCase().includes('nombre')
+              );
+              if (nombreField) {
+                nombre = data[nombreField] || '';
+              }
+              tipoInteraccion = 'asesoria';
+            }
+            
+            if (nombre && chatId) {
+              // Si ya existe un cliente con este chatId, actualizar información
+              if (clientesMap.has(chatId)) {
+                const clienteExistente = clientesMap.get(chatId);
+                // Mantener la información más reciente
+                if (timestamp > parseInt(clienteExistente.creation || '0')) {
+                  clientesMap.set(chatId, {
+                    ...clienteExistente,
+                    id: chatId,
+                    name: nombre,
+                    whatsAppName: nombre,
+                    email: email || clienteExistente.email,
+                    lastUpdate: new Date(timestamp).toISOString(),
+                    tipoUltimaInteraccion: tipoInteraccion,
+                    restauranteId: 'worldfood',
+                    restauranteNombre: 'World Food'
+                  });
+                }
+              } else {
+                // Determinar tipo de cliente basado en sus interacciones
+                let tipoCliente = 'regular';
+                if (typeForm.includes('eventos')) tipoCliente = 'corporativo';
+                else if (tipoInteraccion === 'reserva') tipoCliente = 'vip';
+                
                 clientesMap.set(chatId, {
-                  ...clienteExistente,
                   id: chatId,
                   name: nombre,
                   whatsAppName: nombre,
-                  email: email || clienteExistente.email,
-                  lastUpdate: new Date(timestamp).toISOString(),
+                  email: email || '',
+                  isWAContact: true,
+                  isMyContact: true,
+                  sourceType: 'chatBot',
+                  respType: 'bot',
+                  labels: `cliente_${tipoCliente},${tipoInteraccion}`,
+                  creation: new Date(timestamp).toISOString(),
+                  lastUpdate: new Date().toISOString(),
                   tipoUltimaInteraccion: tipoInteraccion,
                   restauranteId: 'worldfood',
-                  restauranteNombre: 'World Food'
+                  restauranteNombre: 'World Food',
+                  userInteractions: {
+                    whatsapp: 1,
+                    controller: 0,
+                    chatbot: 1,
+                    api: 0,
+                    campaing: 0,
+                    client: 1,
+                    others: 0,
+                    wappController: 0,
+                    ai: 0,
+                    fee: this.calcularFeeAdmin(tipoInteraccion)
+                  }
                 });
               }
-            } else {
-              // Determinar tipo de cliente basado en sus interacciones
-              let tipoCliente = 'regular';
-              if (typeForm.includes('eventos')) tipoCliente = 'corporativo';
-              else if (tipoInteraccion === 'reserva') tipoCliente = 'vip';
-              
-              clientesMap.set(chatId, {
-                id: chatId,
-                name: nombre,
-                whatsAppName: nombre,
-                email: email || '',
-                isWAContact: true,
-                isMyContact: true,
-                sourceType: 'chatBot',
-                respType: 'bot',
-                labels: `cliente_${tipoCliente},${tipoInteraccion}`,
-                creation: new Date(timestamp).toISOString(),
-                lastUpdate: new Date().toISOString(),
-                tipoUltimaInteraccion: tipoInteraccion,
-                restauranteId: 'worldfood',
-                restauranteNombre: 'World Food',
-                userInteractions: {
-                  whatsapp: 1,
-                  controller: 0,
-                  chatbot: 1,
-                  api: 0,
-                  campaing: 0,
-                  client: 1,
-                  others: 0,
-                  wappController: 0,
-                  ai: 0,
-                  fee: this.calcularFeeAdmin(tipoInteraccion)
-                }
-              });
             }
           }
-        }
-      });
+        });
+      }
       
       const clientes = Array.from(clientesMap.values());
       console.log(`✅ AdminService: ${clientes.length} clientes únicos encontrados`);
@@ -350,37 +342,35 @@ export class AdminService {
     try {
       console.log('🔥 AdminService: Obteniendo todas las reservas desde formularios...');
       
-      const app = getApp();
-      const db = getFirestore(app);
-      const formulariosRef = collection(db, this.getFormulariosPath());
+      // Filtrar por formularios de reservas usando AngularFirestore
+      const snapshot = await this.firestore.collection('clients/worldfood/Formularios', ref => 
+        ref.where('typeForm', 'in', [
+          'Formulario reservas particulares',
+          'Formulario reservas eventos'
+        ])
+      ).get().toPromise();
       
-      // Filtrar por formularios de reservas
-      const q = query(formulariosRef, where('typeForm', 'in', [
-        'Formulario reservas particulares',
-        'Formulario reservas eventos'
-      ]));
-      
-      const snapshot = await getDocs(q);
       const reservas: any[] = [];
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const docId = doc.id;
-        
-        // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1]; // Chat ID
-          const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
-          const timestamp = parseInt(parts[0]); // Timestamp
+      if (snapshot && !snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data() as any;
+          const docId = doc.id;
           
-          // Extraer información de la reserva del formulario
-          let contactNameBooking = '';
-          let peopleBooking = '';
-          let finalPeopleBooking = 1;
-          let dateBooking = '';
-          let detailsBooking = '';
-          let statusBooking = 'pending';
+          // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1]; // Chat ID
+            const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
+            const timestamp = parseInt(parts[0]); // Timestamp
+            
+            // Extraer información de la reserva del formulario
+            let contactNameBooking = '';
+            let peopleBooking = '';
+            let finalPeopleBooking = 1;
+            let dateBooking = '';
+            let detailsBooking = '';
+            let statusBooking = 'pending';
           
           if (typeForm.includes('reservas particulares')) {
             // Extraer datos de reservas particulares
@@ -473,7 +463,8 @@ export class AdminService {
             reservas.push(reserva);
           }
         }
-      });
+        });
+      }
       
       console.log(`✅ AdminService: ${reservas.length} reservas encontradas`);
       return reservas;
@@ -695,21 +686,19 @@ export class AdminService {
       // Generar ID único para el restaurante
       const restauranteId = `rest_${restauranteData.slug}_${Date.now().toString().slice(-6)}`;
       
-      const app = getApp();
-      const db = getFirestore(app);
-      const auth = getAuth(app);
+      // Usar servicios inyectados en lugar de Firebase SDK nativo
       
-      // IMPORTANTE: Guardar usuario actual del administrador antes de crear el nuevo
-      const usuarioAdminActual = auth.currentUser;
-      console.log(`💾 Guardando sesión actual del admin: ${usuarioAdminActual?.email}`);
-      
-      // PASO 1: Crear usuario en Firebase Auth
+      // PASO 1: Crear usuario en Firebase Auth usando AngularFireAuth
       console.log('🔐 Creando usuario en Firebase Auth...');
-      const userCredential = await createUserWithEmailAndPassword(auth, restauranteData.email, restauranteData.password);
+      const userCredential = await this.auth.createUserWithEmailAndPassword(restauranteData.email, restauranteData.password);
       const user = userCredential.user;
       
+      if (!user) {
+        throw new Error('Error creando usuario en Firebase Auth');
+      }
+      
       // Actualizar perfil del usuario
-      await updateProfile(user, {
+      await user.updateProfile({
         displayName: `Admin ${restauranteData.nombre}`
       });
       
@@ -787,11 +776,13 @@ export class AdminService {
         }
       };
 
-      // PASO 4: Crear datos del usuario admin
+      // PASO 4: Crear datos del usuario admin (estructura compatible con AuthService)
       const usuarioAdminData = {
         uid: user.uid,
         email: restauranteData.email,
         nombre: `Admin ${restauranteData.nombre}`,
+        restauranteAsignado: restauranteData.slug, // Nombre corto usado en rutas
+        restauranteId: restauranteId, // ID completo
         rol: 'admin',
         permisos: ['read', 'write', 'delete'],
         activo: true,
@@ -807,31 +798,14 @@ export class AdminService {
         { id: 'postres', nombre: 'Postres', descripción: 'Dulces y postres', orden: 4, activa: true }
       ];
 
-      // PASO 6: NUEVA ARQUITECTURA - Crear estructura separada por restaurante
-      console.log('📝 Creando documentos en NUEVA ARQUITECTURA...');
-      const batch = writeBatch(db);
+      // PASO 6: Crear documentos usando AngularFirestore
+      console.log('📝 Creando documentos en Firebase...');
 
-      // 1. Crear información del restaurante: /clients/{restauranteId}/info/restaurante
-      const restauranteInfoPath = this.getRestauranteInfoPath(restauranteId);
-      const restauranteInfoRef = doc(db, restauranteInfoPath, 'restaurante');
-      batch.set(restauranteInfoRef, nuevoRestaurante);
-      console.log(`📁 Creando info del restaurante en: ${this.getRestauranteInfoPath(restauranteId)}/restaurante`);
+      // 1. Crear documento en adminUsers para el nuevo administrador del restaurante
+      await this.firestore.doc(`adminUsers/${user.uid}`).set(usuarioAdminData);
+      console.log(`👤 Admin creado en adminUsers/${user.uid}`);
 
-      // 2. Crear usuario admin del restaurante: /clients/{restauranteId}/users/{adminUID}
-      const usuarioAdminPath = this.getRestauranteUsersPath(restauranteId);
-      const usuarioAdminRef = doc(db, usuarioAdminPath, user.uid);
-      batch.set(usuarioAdminRef, usuarioAdminData);
-      console.log(`👤 Creando usuario admin en: ${this.getRestauranteUsersPath(restauranteId)}/${user.uid}`);
-
-      // 3. Crear documento global del usuario (para búsquedas globales)
-      const usuarioGlobalRef = doc(db, 'usuarios', user.uid);
-      const usuarioGlobalData = {
-        ...usuarioAdminData,
-        restaurantePrincipal: restauranteId
-      };
-      batch.set(usuarioGlobalRef, usuarioGlobalData);
-
-      // 4. COMPATIBILIDAD: Crear también en estructura antigua para migración gradual
+      // 2. Crear documento en estructura de Formularios para compatibilidad
       const timestamp = Date.now();
       const chatId = `admin_${timestamp}`;
       const restauranteDocId = `${timestamp}_restaurante_${chatId}`;
@@ -845,28 +819,17 @@ export class AdminService {
         categorias: categoriasPorDefecto
       };
       
-      const formulariosPath = this.getFormulariosPath();
-      const restauranteCompatibilidadRef = doc(db, formulariosPath, restauranteDocId);
-      batch.set(restauranteCompatibilidadRef, restauranteParaFormularios);
-      console.log(`🔄 COMPATIBILIDAD: También creando en estructura antigua: ${this.getFormulariosPath()}/${restauranteDocId}`);
+      await this.firestore.doc(`clients/worldfood/Formularios/${restauranteDocId}`).set(restauranteParaFormularios);
+      console.log(`🏪 Restaurante creado en Formularios/${restauranteDocId}`);
 
-      // Ejecutar el batch
-      await batch.commit();
+      // PASO 7: Cerrar sesión del nuevo usuario y mantener el admin original
+      console.log('🔄 Cerrando sesión del nuevo usuario para mantener admin...');
+      await this.auth.signOut();
       
-      // PASO 7: IMPORTANTE - Mantener la sesión del administrador 
-      console.log('🔄 Manteniendo sesión del administrador original...');
-      
-      if (usuarioAdminActual && usuarioAdminActual.email) {
-        console.log(`✅ Sesión del admin ${usuarioAdminActual.email} mantenida exitosamente`);
-        console.log('💡 El administrador puede continuar trabajando sin reautenticarse');
-      }
-      
-      console.log(`✅ AdminService: Restaurante creado con NUEVA ARQUITECTURA!`);
-      console.log(`🏗️ NUEVA ESTRUCTURA CREADA:`);
-      console.log(`   📁 Info: /clients/${restauranteId}/info/restaurante`);
-      console.log(`   👤 Admin: /clients/${restauranteId}/users/${user.uid}`);
-      console.log(`   📊 Data: /clients/${restauranteId}/data/{clientes|reservas|pedidos}`);
-      console.log(`🔄 COMPATIBILIDAD: También en ${this.getFormulariosPath()}/${restauranteDocId}`);
+      console.log(`✅ AdminService: Restaurante creado exitosamente!`);
+      console.log(`🏗️ ESTRUCTURA CREADA:`);
+      console.log(`   👤 Admin: adminUsers/${user.uid}`);
+      console.log(`   🏪 Restaurante: clients/worldfood/Formularios/${restauranteDocId}`);
       console.log(`📧 Email: ${restauranteData.email}`);
       console.log(`🏪 Restaurante ID: ${restauranteId}`);
       console.log(`👤 Usuario UID: ${user.uid}`);
@@ -893,44 +856,24 @@ export class AdminService {
   // LEER - Obtener restaurante por ID (NUEVA ARQUITECTURA)
   async obtenerRestaurantePorId(id: string): Promise<RestauranteFirestore | null> {
     try {
-      console.log(`🔍 AdminService: Obteniendo restaurante ${id} (NUEVA ARQUITECTURA)...`);
+      console.log(`🔍 AdminService: Obteniendo restaurante ${id}...`);
       
-      const app = getApp();
-      const db = getFirestore(app);
+      // Buscar en estructura de Formularios por ID
+      const snapshot = await this.firestore.collection('clients/worldfood/Formularios', ref => 
+        ref.where('typeForm', '==', 'restaurante')
+           .where('restauranteId', '==', id)
+      ).get().toPromise();
       
-      // NUEVA ARQUITECTURA: Buscar en /clients/{restauranteId}/info/restaurante
-      try {
-        const restauranteInfoPath = this.getRestauranteInfoPath(id);
-        const restauranteInfoRef = doc(db, restauranteInfoPath, 'restaurante');
-        const infoSnap = await getDoc(restauranteInfoRef);
-        
-        if (infoSnap.exists()) {
-          const data = infoSnap.data();
-          const restaurante = { id: id, ...data } as RestauranteFirestore;
-          console.log('✅ AdminService: Restaurante encontrado en NUEVA ARQUITECTURA:', restaurante.nombre);
-          return restaurante;
-        }
-      } catch (error) {
-        console.log('⚠️ No encontrado en nueva arquitectura, probando estructura antigua...');
+      if (snapshot && !snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const data = doc.data() as any;
+        return {
+          id: data.restauranteId || doc.id,
+          ...data
+        } as RestauranteFirestore;
       }
       
-      // COMPATIBILIDAD: Si no se encuentra en nueva arquitectura, buscar en estructura antigua
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const restauranteQuery = query(formulariosRef, 
-        where('typeForm', '==', 'restaurante'),
-        where('restauranteId', '==', id)
-      );
-      const snapshot = await getDocs(restauranteQuery);
-      
-      if (!snapshot.empty) {
-        const docRestaurante = snapshot.docs[0];
-        const data = docRestaurante.data();
-        const restaurante = { id: data['restauranteId'] || docRestaurante.id, ...data } as RestauranteFirestore;
-        console.log('✅ AdminService: Restaurante encontrado en estructura antigua:', restaurante.nombre);
-        return restaurante;
-      }
-      
-      console.log('❌ AdminService: Restaurante no encontrado en ninguna estructura');
+      console.log('❌ AdminService: Restaurante no encontrado');
       return null;
     } catch (error) {
       console.error('❌ Error obteniendo restaurante:', error);
@@ -956,19 +899,18 @@ export class AdminService {
         fechaActualizacion: new Date()
       };
       
-      const app = getApp();
-      const db = getFirestore(app);
-      const batch = writeBatch(db);
+      // Usar AngularFirestore batch
+      const batch = this.firestore.firestore.batch();
       
       // NUEVA ARQUITECTURA: Actualizar en /clients/{restauranteId}/info/restaurante
       let actualizado = false;
       try {
         const restauranteInfoPath = this.getRestauranteInfoPath(id);
-        const restauranteInfoRef = doc(db, restauranteInfoPath, 'restaurante');
-        const infoSnap = await getDoc(restauranteInfoRef);
+        const restauranteInfoRef = this.firestore.doc(`${restauranteInfoPath}/restaurante`);
+        const infoSnap = await restauranteInfoRef.get().toPromise();
         
-        if (infoSnap.exists()) {
-          batch.update(restauranteInfoRef, datosActualizacion);
+        if (infoSnap && infoSnap.exists) {
+          batch.update(restauranteInfoRef.ref, datosActualizacion);
           console.log('📝 Actualizando en nueva arquitectura...');
           actualizado = true;
         }
@@ -977,18 +919,15 @@ export class AdminService {
       }
       
       // COMPATIBILIDAD: También actualizar en estructura antigua si existe
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const restauranteQuery = query(formulariosRef, 
-        where('typeForm', '==', 'restaurante'),
-        where('restauranteId', '==', id)
-      );
-      const snapshot = await getDocs(restauranteQuery);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath(), ref => 
+        ref.where('typeForm', '==', 'restaurante')
+           .where('restauranteId', '==', id)
+      ).get().toPromise();
       
-      if (!snapshot.empty) {
-        const docRestaurante = snapshot.docs[0];
-        const formulariosPath = this.getFormulariosPath();
-      const restauranteDocRef = doc(db, formulariosPath, docRestaurante.id);
-        batch.update(restauranteDocRef, datosActualizacion);
+      if (snapshot && !snapshot.empty) {
+        const docRestaurante = snapshot!.docs[0];
+        const restauranteDocRef = this.firestore.doc(`${this.getFormulariosPath()}/${docRestaurante.id}`);
+        batch.update(restauranteDocRef.ref, datosActualizacion);
         console.log('🔄 COMPATIBILIDAD: También actualizando en estructura antigua...');
         actualizado = true;
       }
@@ -1005,22 +944,21 @@ export class AdminService {
       
       try {
         const restauranteInfoPath = this.getRestauranteInfoPath(id);
-        const restauranteInfoRef = doc(db, restauranteInfoPath, 'restaurante');
-        const infoSnap = await getDoc(restauranteInfoRef);
+        const restauranteInfoRef = this.firestore.doc(`${restauranteInfoPath}/restaurante`);
+        const infoSnap = await restauranteInfoRef.get().toPromise();
         
-        if (infoSnap.exists()) {
-          const data = infoSnap.data();
+        if (infoSnap && infoSnap.exists) {
+          const data = infoSnap.data() as any;
           restauranteActualizado = { id: id, ...data } as RestauranteFirestore;
         } else {
           throw new Error('Fallback a estructura antigua');
         }
       } catch {
         // Fallback a estructura antigua
-        const docRestaurante = snapshot.docs[0];
-        const formulariosPath = this.getFormulariosPath();
-        const docActualizado = await getDoc(doc(db, formulariosPath, docRestaurante.id));
-        const data = docActualizado.data();
-        restauranteActualizado = { id: data?.['restauranteId'] || docActualizado.id, ...data } as RestauranteFirestore;
+        const docRestaurante = snapshot!.docs[0];
+        const docActualizado = await this.firestore.doc(`${this.getFormulariosPath()}/${docRestaurante.id}`).get().toPromise();
+        const data = docActualizado?.data() as any;
+        restauranteActualizado = { id: data?.['restauranteId'] || docActualizado!.id, ...data } as RestauranteFirestore;
       }
       
       console.log('✅ AdminService: Restaurante actualizado exitosamente en ambas estructuras');
@@ -1036,32 +974,26 @@ export class AdminService {
     try {
       console.log(`🗑️ AdminService: ${eliminarCompletamente ? 'Eliminando completamente' : 'Desactivando'} restaurante ${id}...`);
       
-      const app = getApp();
-      const db = getFirestore(app);
+      // Buscar el documento del restaurante en la ruta multi-tenant usando AngularFirestore
+      const snapshot = await this.firestore.collection(this.getFormulariosPath(), ref => 
+        ref.where('typeForm', '==', 'restaurante')
+           .where('restauranteId', '==', id)
+      ).get().toPromise();
       
-      // Buscar el documento del restaurante en la ruta multi-tenant
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      const restauranteQuery = query(formulariosRef, 
-        where('typeForm', '==', 'restaurante'),
-        where('restauranteId', '==', id)
-      );
-      const snapshot = await getDocs(restauranteQuery);
-      
-      if (snapshot.empty) {
+      if (snapshot && snapshot.empty) {
         throw new Error('Restaurante no encontrado');
       }
       
-      const docRestaurante = snapshot.docs[0];
-      const formulariosPath = this.getFormulariosPath();
-      const restauranteDocRef = doc(db, formulariosPath, docRestaurante.id);
+      const docRestaurante = snapshot!.docs[0];
+      const restauranteDocRef = this.firestore.doc(`${this.getFormulariosPath()}/${docRestaurante.id}`);
       
       if (eliminarCompletamente) {
         // ADVERTENCIA: Eliminación completa - también debería eliminar subcollecciones
-        await deleteDoc(restauranteDocRef);
+        await restauranteDocRef.delete();
         console.log('✅ AdminService: Restaurante eliminado completamente');
       } else {
         // Soft delete - solo marcar como inactivo
-        await updateDoc(restauranteDocRef, {
+        await restauranteDocRef.update({
           activo: false,
           fechaEliminacion: new Date(),
           fechaActualizacion: new Date()
@@ -1189,18 +1121,17 @@ export class AdminService {
       const extension = archivo.name.split('.').pop();
       const nombreArchivo = `logo_${restauranteId}_${timestamp}.${extension}`;
 
-      // Crear referencia en Firebase Storage
-      const app = getApp();
-      const storage = getStorage(app);
-      const logoRef = ref(storage, `restaurantes/${restauranteId}/logos/${nombreArchivo}`);
+      // Crear referencia en Firebase Storage usando AngularFireStorage
+      const logoRef = this.storage.ref(`restaurantes/${restauranteId}/logos/${nombreArchivo}`);
 
       // Subir archivo
       console.log('⬆️ Subiendo archivo a Firebase Storage...');
-      const snapshot = await uploadBytes(logoRef, archivo);
+      const uploadTask = logoRef.put(archivo);
+      const snapshot = await uploadTask;
       console.log('✅ Archivo subido exitosamente');
 
       // Obtener URL de descarga
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      const downloadURL = await snapshot.ref.getDownloadURL();
       console.log('🔗 URL de descarga obtenida:', downloadURL);
 
       return downloadURL;
@@ -1219,11 +1150,10 @@ export class AdminService {
 
       console.log('🗑️ AdminService: Eliminando logo anterior...');
       
-      const app = getApp();
-      const storage = getStorage(app);
-      const logoRef = ref(storage, logoUrl);
+      // Usar AngularFireStorage para eliminar
+      const logoRef = this.storage.refFromURL(logoUrl);
       
-      await deleteObject(logoRef);
+      await logoRef.delete();
       console.log('✅ Logo anterior eliminado');
     } catch (error) {
       console.warn('⚠️ Error eliminando logo anterior (puede que no exista):', error);

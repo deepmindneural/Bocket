@@ -2,22 +2,7 @@ import { Injectable } from '@angular/core';
 import { Cliente } from '../modelos';
 import { AuthService } from './auth.service';
 import { BehaviorSubject, Observable } from 'rxjs';
-
-// Import Firebase SDK nativo
-import { 
-  getFirestore, 
-  collection, 
-  query, 
-  orderBy, 
-  limit, 
-  startAfter, 
-  getDocs,
-  DocumentSnapshot,
-  QueryConstraint,
-  where,
-  DocumentData
-} from 'firebase/firestore';
-import { getApp } from 'firebase/app';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
 
 export interface PaginationState {
   currentPage: number;
@@ -48,11 +33,12 @@ export class ClientePaginadoService {
   });
   public paginationState$ = this.paginationStateSubject.asObservable();
   
-  private lastDocuments: Map<number, DocumentSnapshot> = new Map();
+  private lastDocuments: Map<number, any> = new Map();
   private allClientes: Cliente[] = []; // Cache para búsqueda
   
   constructor(
-    private authService: AuthService
+    private authService: AuthService,
+    private firestore: AngularFirestore
   ) {}
 
   /**
@@ -67,8 +53,7 @@ export class ClientePaginadoService {
 
       this.actualizarEstadoPaginacion({ isLoading: true, pageSize });
 
-      const app = getApp();
-      const db = getFirestore(app);
+      // Using AngularFirestore instead of Firebase SDK
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
       const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
@@ -131,8 +116,7 @@ export class ClientePaginadoService {
 
       this.actualizarEstadoPaginacion({ isLoading: true });
 
-      const app = getApp();
-      const db = getFirestore(app);
+      // Using AngularFirestore instead of Firebase SDK
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
       const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
@@ -201,8 +185,7 @@ export class ClientePaginadoService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
+      // Using AngularFirestore instead of Firebase SDK
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
       const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       
@@ -265,8 +248,7 @@ export class ClientePaginadoService {
         throw new Error('No hay restaurante actual seleccionado');
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
+      // Using AngularFirestore instead of Firebase SDK
       // ARQUITECTURA CORRECTA: usar nombre del restaurante
       const clientesRef = collection(db, `clients/${restauranteActual.nombre}/clientes`);
       

@@ -5,9 +5,7 @@ import { map } from 'rxjs/operators';
 import { Pedido } from '../modelos/pedido.model';
 import { AuthService } from './auth.service';
 
-// Import Firebase SDK nativo para operaciones directas
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
+// Firebase SDK imports removed - now using AngularFirestore
 
 @Injectable({
   providedIn: 'root'
@@ -33,8 +31,17 @@ export class PedidoService {
   }
 
   /**
+   * ESTRUCTURA FINAL: Obtener la ruta para formularios de pedidos organizados
+   */
+  private getFormulariosPedidosPath(nombreRestaurante: string): string {
+    const path = `${this.baseCollection}/${nombreRestaurante}/formularios/pedidos/datos`;
+    console.log(`📍 PedidoService (ESTRUCTURA FINAL): Usando ruta formularios pedidos: ${path}`);
+    return path;
+  }
+
+  /**
    * COMPATIBILIDAD: Obtener la ruta completa para los formularios (arquitectura multi-tenant unificada)
-   * @deprecated Usar getPedidosPath en su lugar
+   * @deprecated Usar getFormulariosPedidosPath en su lugar
    */
   private getFormulariosPath(): string {
     const path = `${this.baseCollection}/${this.businessId}/${this.formulariosCollection}`;
@@ -78,8 +85,6 @@ export class PedidoService {
       
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
       
       // ARQUITECTURA CORRECTA: Obtener pedidos de /clients/{nombreRestaurante}/Formularios/pedidos/
       console.log(`📍 Consultando ARQUITECTURA CORRECTA: ${this.getPedidosPath(nombreRestaurante)}`);
@@ -87,13 +92,13 @@ export class PedidoService {
       let pedidos: Pedido[] = [];
       
       try {
-        const pedidosRef = collection(db, this.getPedidosPath(nombreRestaurante));
-        const snapshot = await getDocs(pedidosRef);
+        const pedidosRef = this.firestore.collection(this.getPedidosPath(nombreRestaurante));
+        const snapshot = await pedidosRef.get().toPromise();
         
-        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot.size}`);
+        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot?.size || 0}`);
         
-        snapshot.forEach(doc => {
-          const data = doc.data();
+        snapshot?.forEach(doc => {
+          const data = doc.data() as any;
           const pedido = this.mapearDocumentoAPedido(doc.id, data);
           if (pedido) {
             pedidos.push(pedido);
@@ -112,31 +117,31 @@ export class PedidoService {
       // COMPATIBILIDAD: Si no hay datos en nueva arquitectura, consultar estructura antigua
       console.log(`📍 Consultando COMPATIBILIDAD: ${this.getFormulariosPath()}`);
       
-      const formulariosRef = collection(db, this.getFormulariosPath());
+      const formulariosRef = this.firestore.collection(this.getFormulariosPath());
       
       // Buscar formularios de pedidos del restaurante actual (si existen)
-      const q = query(formulariosRef, 
-        where('restauranteId', '==', restauranteId),
-        where('typeForm', 'in', [
+      const q = formulariosRef.ref.where('restauranteId', '==', restauranteId)
+        .where('typeForm', 'in', [
           'Formulario pedidos',
           'Formulario delivery',
           'Formulario takeaway'
-        ])
-      );
+        ]);
       
       console.log(`📡 Realizando consulta de compatibilidad para restaurante: ${restauranteId}...`);
-      const snapshot = await getDocs(q);
+      const snapshot = await this.firestore.firestore.runTransaction(async () => {
+        return await q.get();
+      });
       
       // Si no hay formularios de pedidos, devolver lista vacía 
-      if (snapshot.empty) {
+      if (snapshot?.empty) {
         console.log('📝 No se encontraron formularios de pedidos para este restaurante');
         console.log('💡 Para ver pedidos, crea algunos usando la función "Crear Pedido" en la interfaz');
         return [];
       }
       
       // Procesar formularios de pedidos existentes
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      snapshot?.forEach((doc: any) => {
+        const data = doc.data() as any;
         const docId = doc.id;
         
         // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
@@ -278,17 +283,15 @@ export class PedidoService {
       console.log(`🔍 PedidoService.obtenerPorId() - Buscando pedido: ${id}`);
       
       const nombreRestaurante = this.getRestauranteActualNombre();
-      const app = getApp();
-      const db = getFirestore(app);
       
       // ARQUITECTURA CORRECTA: Buscar directamente en /clients/{nombreRestaurante}/Formularios/pedidos/
       try {
         const pedidosPath = this.getPedidosPath(nombreRestaurante);
-        const pedidoDocRef = doc(db, pedidosPath, id);
-        const docSnap = await getDoc(pedidoDocRef);
+        const pedidoDocRef = this.firestore.doc(`${pedidosPath}/${id}`);
+        const docSnap = await pedidoDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (docSnap && docSnap.exists) {
+          const data = docSnap.data() as any;
           const pedido = this.mapearDocumentoAPedido(id, data);
           if (pedido) {
             console.log(`✅ Pedido encontrado en ARQUITECTURA CORRECTA: ${pedido.contactNameOrder}`);
@@ -301,15 +304,15 @@ export class PedidoService {
       
       // COMPATIBILIDAD: Buscar en la colección de formularios
       const formulariosPath = this.getFormulariosPath();
-      const pedidoDocRef = doc(db, formulariosPath, id);
-      const pedidoDoc = await getDoc(pedidoDocRef);
+      const pedidoDocRef = this.firestore.doc(`${formulariosPath}/${id}`);
+      const pedidoDoc = await pedidoDocRef.get().toPromise();
       
-      if (!pedidoDoc.exists()) {
+      if (!pedidoDoc || !pedidoDoc.exists) {
         console.log(`❌ Pedido no encontrado en ninguna estructura: ${id}`);
         return null;
       }
       
-      const data = pedidoDoc.data();
+      const data = pedidoDoc.data() as any;
       const docId = pedidoDoc.id;
       
       console.log(`📄 COMPATIBILIDAD - Documento encontrado: ${docId}`);
@@ -361,18 +364,40 @@ export class PedidoService {
         fechaActualizacion: new Date().toISOString()
       };
 
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // ARQUITECTURA CORRECTA: Guardar en /clients/{nombreRestaurante}/Formularios/pedidos/
+      // ARQUITECTURA CORRECTA: Guardar usando AngularFirestore
       const pedidosPath = this.getPedidosPath(nombreRestaurante);
-      const pedidoDocRef = doc(db, pedidosPath, nuevoPedido.id);
+      const pedidoDocRef = this.firestore.doc(`${pedidosPath}/${nuevoPedido.id}`);
       
       console.log(`📍 ARQUITECTURA CORRECTA - Guardando en: ${this.getPedidosPath(nombreRestaurante)}/${nuevoPedido.id}`);
-      await setDoc(pedidoDocRef, nuevoPedido);
+      await pedidoDocRef.set(nuevoPedido);
       
-      // COMPATIBILIDAD: También crear en estructura antigua para migración gradual
+      // ESTRUCTURA FINAL: También crear en formularios de pedidos organizados
+      const rutaFormulariosPedidos = this.getFormulariosPedidosPath(nombreRestaurante);
       const timestamp = Date.now();
+      const docIdFormulario = `${timestamp}_pedido_${nuevoPedido.contact}`;
+      
+      const datosFormularioPedido = {
+        id: docIdFormulario,
+        tipoFormulario: 'pedidos',
+        restauranteSlug: nombreRestaurante,
+        restauranteId: restauranteId,
+        chatId: nuevoPedido.contact,
+        timestamp: timestamp,
+        nombreCliente: nuevoPedido.contactNameOrder,
+        descripcionPedido: nuevoPedido.resumeOrder,
+        tipoPedido: this.obtenerEtiquetaTipoPedido(nuevoPedido.orderType),
+        direccionEntrega: nuevoPedido.addressToDelivery || 'No aplica',
+        status: nuevoPedido.statusBooking,
+        orderType: nuevoPedido.orderType,
+        total: nuevoPedido.total || 0,
+        fechaCreacion: new Date().toISOString(),
+        source: 'manual_creation'
+      };
+
+      const pedidoFormularioRef = this.firestore.doc(`${rutaFormulariosPedidos}/${docIdFormulario}`);
+      await pedidoFormularioRef.set(datosFormularioPedido);
+
+      // COMPATIBILIDAD: También crear en estructura antigua para migración gradual
       const docIdCompatibilidad = `${timestamp}_Formulario pedidos_${nuevoPedido.contact}`;
       
       const datosFormularioCompatibilidad = {
@@ -391,11 +416,12 @@ export class PedidoService {
       };
 
       const formulariosPath = this.getFormulariosPath();
-      const pedidoCompatibilidadRef = doc(db, formulariosPath, docIdCompatibilidad);
-      await setDoc(pedidoCompatibilidadRef, datosFormularioCompatibilidad);
+      const pedidoCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${docIdCompatibilidad}`);
+      await pedidoCompatibilidadRef.set(datosFormularioCompatibilidad);
       
-      console.log('✅ Pedido creado exitosamente en AMBAS ESTRUCTURAS');
+      console.log('✅ Pedido creado exitosamente en TODAS LAS ESTRUCTURAS');
       console.log(`   🏗️ ARQUITECTURA CORRECTA: ${this.getPedidosPath(nombreRestaurante)}/${nuevoPedido.id}`);
+      console.log(`   📋 ESTRUCTURA FINAL: ${rutaFormulariosPedidos}/${docIdFormulario}`);
       console.log(`   🔄 COMPATIBILIDAD: ${this.getFormulariosPath()}/${docIdCompatibilidad}`);
       console.log(`   👤 Contacto: ${nuevoPedido.contactNameOrder}`);
       
@@ -426,8 +452,6 @@ export class PedidoService {
       console.log('🔥 PedidoService.actualizar() - Actualizando pedido con ARQUITECTURA CORRECTA:', id);
 
       const nombreRestaurante = this.getRestauranteActualNombre();
-      const app = getApp();
-      const db = getFirestore(app);
       
       // Obtener pedido actual
       const pedidoActual = await this.obtenerPorId(id);
@@ -448,11 +472,11 @@ export class PedidoService {
       // ARQUITECTURA CORRECTA: Actualizar en /clients/{nombreRestaurante}/Formularios/pedidos/
       try {
         const pedidosPath = this.getPedidosPath(nombreRestaurante);
-        const pedidoDocRef = doc(db, pedidosPath, id);
-        const docSnap = await getDoc(pedidoDocRef);
+        const pedidoDocRef = this.firestore.doc(`${pedidosPath}/${id}`);
+        const docSnap = await pedidoDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await setDoc(pedidoDocRef, pedidoActualizado);
+        if (docSnap && docSnap.exists) {
+          await pedidoDocRef.set(pedidoActualizado);
           console.log(`✅ Pedido actualizado en ARQUITECTURA CORRECTA`);
           actualizado = true;
         }
@@ -463,20 +487,20 @@ export class PedidoService {
       // COMPATIBILIDAD: Actualizar también en estructura antigua si existe
       try {
         const formulariosPath = this.getFormulariosPath();
-        const pedidoCompatibilidadRef = doc(db, formulariosPath, id);
-        const docSnap = await getDoc(pedidoCompatibilidadRef);
+        const pedidoCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${id}`);
+        const docSnap = await pedidoCompatibilidadRef.get().toPromise();
         
-        if (docSnap.exists()) {
+        if (docSnap && docSnap.exists) {
           console.log('🔄 COMPATIBILIDAD - Actualizando estructura antigua...');
           
-          const datosActuales = docSnap.data();
+          const datosActuales = docSnap.data() as any;
           const datosActualizados: any = {
             lastUpdate: new Date().toISOString()
           };
 
           // Actualizar campos específicos
           if (cambios.contactNameOrder) {
-            const nombreField = Object.keys(datosActuales).find(key => 
+            const nombreField = Object.keys(datosActuales as any).find(key => 
               key.toLowerCase().includes('nombre')
             );
             if (nombreField) {
@@ -485,7 +509,7 @@ export class PedidoService {
           }
 
           if (cambios.resumeOrder) {
-            const pedidoField = Object.keys(datosActuales).find(key => 
+            const pedidoField = Object.keys(datosActuales as any).find(key => 
               key.toLowerCase().includes('pedido') || key.toLowerCase().includes('describe')
             );
             if (pedidoField) {
@@ -494,7 +518,7 @@ export class PedidoService {
           }
 
           if (cambios.orderType) {
-            const tipoField = Object.keys(datosActuales).find(key => 
+            const tipoField = Object.keys(datosActuales as any).find(key => 
               key.toLowerCase().includes('tipo')
             );
             if (tipoField) {
@@ -504,7 +528,7 @@ export class PedidoService {
           }
 
           if (cambios.addressToDelivery) {
-            const direccionField = Object.keys(datosActuales).find(key => 
+            const direccionField = Object.keys(datosActuales as any).find(key => 
               key.toLowerCase().includes('dirección') || key.toLowerCase().includes('entrega')
             );
             if (direccionField) {
@@ -517,7 +541,7 @@ export class PedidoService {
             datosActualizados.status = cambios.statusBooking;
           }
 
-          await updateDoc(pedidoCompatibilidadRef, datosActualizados);
+          await pedidoCompatibilidadRef.update(datosActualizados);
           console.log(`✅ COMPATIBILIDAD - Pedido actualizado en estructura antigua`);
           actualizado = true;
         }
@@ -545,19 +569,17 @@ export class PedidoService {
       console.log('🔥 PedidoService.eliminar() - Eliminando pedido con ARQUITECTURA CORRECTA:', id);
 
       const nombreRestaurante = this.getRestauranteActualNombre();
-      const app = getApp();
-      const db = getFirestore(app);
       
       let eliminado = false;
       
       // ARQUITECTURA CORRECTA: Eliminar de /clients/{nombreRestaurante}/Formularios/pedidos/
       try {
         const pedidosPath = this.getPedidosPath(nombreRestaurante);
-        const pedidoDocRef = doc(db, pedidosPath, id);
-        const docSnap = await getDoc(pedidoDocRef);
+        const pedidoDocRef = this.firestore.doc(`${pedidosPath}/${id}`);
+        const docSnap = await pedidoDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await deleteDoc(pedidoDocRef);
+        if (docSnap && docSnap.exists) {
+          await pedidoDocRef.delete();
           console.log(`✅ Pedido eliminado de ARQUITECTURA CORRECTA`);
           eliminado = true;
         }
@@ -568,11 +590,11 @@ export class PedidoService {
       // COMPATIBILIDAD: Eliminar también de estructura antigua
       try {
         const formulariosPath = this.getFormulariosPath();
-        const pedidoCompatibilidadRef = doc(db, formulariosPath, id);
-        const docSnap = await getDoc(pedidoCompatibilidadRef);
+        const pedidoCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${id}`);
+        const docSnap = await pedidoCompatibilidadRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await deleteDoc(pedidoCompatibilidadRef);
+        if (docSnap && docSnap.exists) {
+          await pedidoCompatibilidadRef.delete();
           console.log(`✅ COMPATIBILIDAD - Pedido eliminado de estructura antigua`);
           eliminado = true;
         }

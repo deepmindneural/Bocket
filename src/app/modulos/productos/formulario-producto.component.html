@@ -281,7 +281,7 @@
         <h4>Vista Previa</h4>
         <img [src]="formularioProducto.get('imagen')?.value" 
              [alt]="formularioProducto.get('nombre')?.value"
-             (error)="$event.target.style.display='none'"
+             (error)="onImageError($event)"
              class="preview-image">
       </div>
     </div>

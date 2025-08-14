@@ -6,8 +6,6 @@ import { Reserva } from '../modelos/reserva.model';
 import { AuthService } from './auth.service';
 
 // Import Firebase SDK nativo para operaciones directas
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
 
 @Injectable({
   providedIn: 'root'
@@ -47,8 +45,17 @@ export class ReservaService {
   }
 
   /**
+   * ESTRUCTURA FINAL: Obtener la ruta para formularios de reservas organizados
+   */
+  private getFormulariosReservasPath(nombreRestaurante: string): string {
+    const path = `${this.baseCollection}/${nombreRestaurante}/formularios/reservas/datos`;
+    console.log(`📍 ReservaService (ESTRUCTURA FINAL): Usando ruta formularios reservas: ${path}`);
+    return path;
+  }
+
+  /**
    * COMPATIBILIDAD: Obtener la ruta completa para los formularios (arquitectura multi-tenant unificada)
-   * @deprecated Usar getReservasPath en su lugar
+   * @deprecated Usar getFormulariosReservasPath en su lugar
    */
   private getFormulariosPath(): string {
     const path = `${this.baseCollection}/${this.businessId}/${this.formulariosCollection}`;
@@ -92,8 +99,6 @@ export class ReservaService {
       
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
       
       // ARQUITECTURA CORRECTA: Obtener reservas de /clients/{nombreRestaurante}/Formularios/reservas/
       console.log(`📍 Consultando ARQUITECTURA CORRECTA: ${this.getReservasPath(nombreRestaurante)}`);
@@ -101,19 +106,20 @@ export class ReservaService {
       let reservas: Reserva[] = [];
       
       try {
-        const reservasRef = collection(db, this.getReservasPath(nombreRestaurante));
-        const snapshot = await getDocs(reservasRef);
+        const snapshot = await this.firestore.collection(this.getReservasPath(nombreRestaurante)).get().toPromise();
         
-        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot.size}`);
+        console.log(`📊 ARQUITECTURA CORRECTA - Documentos encontrados: ${snapshot?.size || 0}`);
         
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const reserva = this.mapearDocumentoAReserva(doc.id, data);
-          if (reserva) {
-            reservas.push(reserva);
-            console.log(`✅ Reserva de arquitectura correcta: ${reserva.contactNameBooking} (${reserva.id})`);
-          }
-        });
+        if (snapshot) {
+          snapshot.forEach(doc => {
+            const data = doc.data() as any;
+            const reserva = this.mapearDocumentoAReserva(doc.id, data);
+            if (reserva) {
+              reservas.push(reserva);
+              console.log(`✅ Reserva de arquitectura correcta: ${reserva.contactNameBooking} (${reserva.id})`);
+            }
+          });
+        }
         
         if (reservas.length > 0) {
           console.log(`✅ ReservaService: ${reservas.length} reservas encontradas en ARQUITECTURA CORRECTA`);
@@ -126,42 +132,40 @@ export class ReservaService {
       // COMPATIBILIDAD: Si no hay datos en arquitectura correcta, consultar estructura antigua
       console.log(`📍 Consultando COMPATIBILIDAD: ${this.getFormulariosPath()}`);
       
-      const formulariosRef = collection(db, this.getFormulariosPath());
-      
       // Filtrar solo documentos del restaurante actual con typeForm de reservas
-      const q = query(formulariosRef, 
-        where('restauranteId', '==', restauranteId),
-        where('typeForm', 'in', [
-          'Formulario reservas particulares',
-          'Formulario reservas eventos'
-        ])
-      );
-      
       console.log(`📡 Realizando consulta de compatibilidad para restaurante: ${restauranteId}...`);
-      const snapshot = await getDocs(q);
+      const snapshot = await this.firestore.collection(this.getFormulariosPath(), ref => 
+        ref.where('restauranteId', '==', restauranteId)
+           .where('typeForm', 'in', [
+             'Formulario reservas particulares',
+             'Formulario reservas eventos'
+           ])
+      ).get().toPromise();
       
-      console.log(`📊 COMPATIBILIDAD - Total documentos encontrados: ${snapshot.size}`);
+      console.log(`📊 COMPATIBILIDAD - Total documentos encontrados: ${snapshot?.size || 0}`);
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const docId = doc.id;
-        
-        // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
-        const parts = docId.split('_');
-        if (parts.length >= 3) {
-          const chatId = parts[parts.length - 1]; // Chat ID
-          const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
-          const timestamp = parseInt(parts[0]); // Timestamp
+      if (snapshot) {
+        snapshot.forEach(doc => {
+          const data = doc.data() as any;
+          const docId = doc.id;
           
-          // Extraer información de la reserva del formulario
-          const reservaInfo = this.extraerInfoReserva(data, typeForm, chatId, timestamp, docId);
-          
-          if (reservaInfo) {
-            reservas.push(reservaInfo);
-            console.log(`✅ Reserva de compatibilidad: ${reservaInfo.contactNameBooking} (${reservaInfo.id})`);
+          // Parsear ID del documento: {timestamp}_{typeForm}_{chatId}
+          const parts = docId.split('_');
+          if (parts.length >= 3) {
+            const chatId = parts[parts.length - 1]; // Chat ID
+            const typeForm = parts.slice(1, -1).join('_'); // Tipo de formulario
+            const timestamp = parseInt(parts[0]); // Timestamp
+            
+            // Extraer información de la reserva del formulario
+            const reservaInfo = this.extraerInfoReserva(data, typeForm, chatId, timestamp, docId);
+            
+            if (reservaInfo) {
+              reservas.push(reservaInfo);
+              console.log(`✅ Reserva de compatibilidad: ${reservaInfo.contactNameBooking} (${reservaInfo.id})`);
+            }
           }
-        }
-      });
+        });
+      }
       
       console.log(`✅ ReservaService.obtenerTodos() - ${reservas.length} reservas encontradas`);
       return reservas;
@@ -364,17 +368,14 @@ export class ReservaService {
       console.log(`🔍 ReservaService.obtenerPorId() - Buscando reserva: ${id}`);
       
       const nombreRestaurante = this.getRestauranteActualNombre();
-      const app = getApp();
-      const db = getFirestore(app);
       
       // ARQUITECTURA CORRECTA: Buscar directamente en /clients/{nombreRestaurante}/Formularios/reservas/
       try {
         const reservasPath = this.getReservasPath(nombreRestaurante);
-        const reservaDocRef = doc(db, reservasPath, id);
-        const docSnap = await getDoc(reservaDocRef);
+        const docSnap = await this.firestore.doc(`${reservasPath}/${id}`).get().toPromise();
         
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+        if (docSnap && docSnap.exists) {
+          const data = docSnap.data() as any;
           const reserva = this.mapearDocumentoAReserva(id, data);
           if (reserva) {
             console.log(`✅ Reserva encontrada en ARQUITECTURA CORRECTA: ${reserva.contactNameBooking}`);
@@ -386,15 +387,14 @@ export class ReservaService {
       }
       
       // COMPATIBILIDAD: Buscar en la colección de formularios
-      const reservaDocRef = doc(db, this.getFormulariosPath(), id);
-      const reservaDoc = await getDoc(reservaDocRef);
+      const reservaDoc = await this.firestore.doc(`${this.getFormulariosPath()}/${id}`).get().toPromise();
       
-      if (!reservaDoc.exists()) {
+      if (!reservaDoc || !reservaDoc.exists) {
         console.log(`❌ Reserva no encontrada en ninguna estructura: ${id}`);
         return null;
       }
       
-      const data = reservaDoc.data();
+      const data = reservaDoc.data() as any;
       const docId = reservaDoc.id;
       
       console.log(`📄 COMPATIBILIDAD - Documento encontrado: ${docId}`);
@@ -451,21 +451,41 @@ export class ReservaService {
         nuevaReserva.reconfirmStatus = reserva.reconfirmStatus;
       }
 
-      const app = getApp();
-      const db = getFirestore(app);
-      
-      // ARQUITECTURA CORRECTA: Guardar en /clients/{nombreRestaurante}/Formularios/reservas/
+      // ARQUITECTURA CORRECTA: Guardar usando AngularFirestore
       const reservasPath = this.getReservasPath(nombreRestaurante);
-      const reservaDocRef = doc(db, reservasPath, nuevaReserva.id);
+      const reservaDocRef = this.firestore.doc(`${reservasPath}/${nuevaReserva.id}`);
       
       console.log(`📍 ARQUITECTURA CORRECTA - Guardando en: ${this.getReservasPath(nombreRestaurante)}/${nuevaReserva.id}`);
       
       // Limpiar campos undefined antes de enviar a Firebase
       const datosLimpios = this.limpiarCamposUndefined(nuevaReserva);
-      await setDoc(reservaDocRef, datosLimpios);
+      await reservaDocRef.set(datosLimpios);
       
-      // COMPATIBILIDAD: También crear en estructura antigua para migración gradual
+      // ESTRUCTURA FINAL: También crear en formularios de reservas organizados
+      const rutaFormulariosReservas = this.getFormulariosReservasPath(nombreRestaurante);
       const timestamp = Date.now();
+      const docIdFormulario = `${timestamp}_reserva_${nuevaReserva.contact}`;
+      
+      const datosFormularioReserva = {
+        id: docIdFormulario,
+        tipoFormulario: 'reservas',
+        restauranteSlug: nombreRestaurante,
+        restauranteId: restauranteId,
+        chatId: nuevaReserva.contact,
+        timestamp: timestamp,
+        nombreCliente: nuevaReserva.contactNameBooking,
+        numeroPersonas: nuevaReserva.peopleBooking,
+        fechaHora: this.formatearFechaParaFormulario(nuevaReserva.dateBooking),
+        areaPreferencia: nuevaReserva.detailsBooking || 'Sin preferencia',
+        status: nuevaReserva.statusBooking,
+        fechaCreacion: new Date().toISOString(),
+        source: 'manual_creation'
+      };
+
+      const reservaFormularioRef = this.firestore.doc(`${rutaFormulariosReservas}/${docIdFormulario}`);
+      await reservaFormularioRef.set(datosFormularioReserva);
+
+      // COMPATIBILIDAD: También crear en estructura antigua para migración gradual
       const docIdCompatibilidad = `${timestamp}_Formulario reservas particulares_${nuevaReserva.contact}`;
       
       const datosFormularioCompatibilidad = {
@@ -483,11 +503,12 @@ export class ReservaService {
       };
 
       const formulariosPath = this.getFormulariosPath();
-      const reservaCompatibilidadRef = doc(db, formulariosPath, docIdCompatibilidad);
-      await setDoc(reservaCompatibilidadRef, datosFormularioCompatibilidad);
+      const reservaCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${docIdCompatibilidad}`);
+      await reservaCompatibilidadRef.set(datosFormularioCompatibilidad);
       
-      console.log('✅ Reserva creada exitosamente en AMBAS ESTRUCTURAS');
+      console.log('✅ Reserva creada exitosamente en TODAS LAS ESTRUCTURAS');
       console.log(`   🏗️ ARQUITECTURA CORRECTA: ${this.getReservasPath(nombreRestaurante)}/${nuevaReserva.id}`);
+      console.log(`   📋 ESTRUCTURA FINAL: ${rutaFormulariosReservas}/${docIdFormulario}`);
       console.log(`   🔄 COMPATIBILIDAD: ${this.getFormulariosPath()}/${docIdCompatibilidad}`);
       console.log(`   👤 Contacto: ${nuevaReserva.contactNameBooking}`);
       
@@ -526,8 +547,7 @@ export class ReservaService {
 
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
+      // Usar AngularFirestore en lugar de Firebase SDK nativo
       
       // Obtener reserva actual
       const reservaActual = await this.obtenerPorId(id);
@@ -544,14 +564,14 @@ export class ReservaService {
       
       let actualizado = false;
       
-      // ARQUITECTURA CORRECTA: Actualizar en /clients/{nombreRestaurante}/Formularios/reservas/
+      // ARQUITECTURA CORRECTA: Actualizar usando AngularFirestore
       try {
         const reservasPath = this.getReservasPath(nombreRestaurante);
-        const reservaDocRef = doc(db, reservasPath, id);
-        const docSnap = await getDoc(reservaDocRef);
+        const reservaDocRef = this.firestore.doc(`${reservasPath}/${id}`);
+        const docSnap = await reservaDocRef.get().toPromise();
         
-        if (docSnap.exists()) {
-          await setDoc(reservaDocRef, reservaActualizada);
+        if (docSnap && docSnap.exists) {
+          await reservaDocRef.set(reservaActualizada);
           console.log(`✅ Reserva actualizada en ARQUITECTURA CORRECTA`);
           actualizado = true;
         }
@@ -562,13 +582,13 @@ export class ReservaService {
       // COMPATIBILIDAD: Actualizar también en estructura antigua si existe
       try {
         const formulariosPath = this.getFormulariosPath();
-        const reservaCompatibilidadRef = doc(db, formulariosPath, id);
-        const docSnap = await getDoc(reservaCompatibilidadRef);
+        const reservaCompatibilidadRef = this.firestore.doc(`${formulariosPath}/${id}`);
+        const docSnap = await reservaCompatibilidadRef.get().toPromise();
         
-        if (docSnap.exists()) {
+        if (docSnap && docSnap.exists) {
           console.log('🔄 COMPATIBILIDAD - Actualizando estructura antigua...');
           
-          const datosActuales = docSnap.data();
+          const datosActuales = docSnap.data() as any;
           const datosActualizados: any = {
             lastUpdate: new Date().toISOString()
           };
@@ -615,7 +635,7 @@ export class ReservaService {
             }
           }
 
-          await updateDoc(reservaCompatibilidadRef, datosActualizados);
+          await reservaCompatibilidadRef.update(datosActualizados);
           console.log(`✅ COMPATIBILIDAD - Reserva actualizada en estructura antigua`);
           actualizado = true;
         }
@@ -644,19 +664,16 @@ export class ReservaService {
 
       const nombreRestaurante = this.getRestauranteActualNombre();
       const restauranteId = this.getRestauranteActualId(); // Para compatibilidad
-      const app = getApp();
-      const db = getFirestore(app);
       
       let eliminado = false;
       
       // ARQUITECTURA CORRECTA: Eliminar de /clients/{nombreRestaurante}/Formularios/reservas/
       try {
         const reservasPath = this.getReservasPath(nombreRestaurante);
-        const reservaDocRef = doc(db, reservasPath, id);
-        const docSnap = await getDoc(reservaDocRef);
+        const docSnap = await this.firestore.doc(`${reservasPath}/${id}`).get().toPromise();
         
-        if (docSnap.exists()) {
-          await deleteDoc(reservaDocRef);
+        if (docSnap && docSnap.exists) {
+          await this.firestore.doc(`${reservasPath}/${id}`).delete();
           console.log(`✅ Reserva eliminada de ARQUITECTURA CORRECTA`);
           eliminado = true;
         }
@@ -667,11 +684,10 @@ export class ReservaService {
       // COMPATIBILIDAD: Eliminar también de estructura antigua
       try {
         const formulariosPath = this.getFormulariosPath();
-        const reservaCompatibilidadRef = doc(db, formulariosPath, id);
-        const docSnap = await getDoc(reservaCompatibilidadRef);
+        const docSnap = await this.firestore.doc(`${formulariosPath}/${id}`).get().toPromise();
         
-        if (docSnap.exists()) {
-          await deleteDoc(reservaCompatibilidadRef);
+        if (docSnap && docSnap.exists) {
+          await this.firestore.doc(`${formulariosPath}/${id}`).delete();
           console.log(`✅ COMPATIBILIDAD - Reserva eliminada de estructura antigua`);
           eliminado = true;
         }

@@ -5,9 +5,7 @@ import { Router } from '@angular/router';
 import { Observable, from, of, switchMap } from 'rxjs';
 import { UsuarioGlobal, UsuarioRestaurante } from '../modelos';
 
-// Import Firebase SDK nativo para operaciones directas
-import { getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
+// Firebase ya está configurado vía AngularFire
 
 @Injectable({
   providedIn: 'root'
@@ -110,66 +108,31 @@ export class AuthService {
         console.log('🏪 AuthService: Restaurante principal ID:', restaurantePrincipalId);
         
         if (restaurantePrincipalId) {
-          console.log('🔍 AuthService: Buscando datos del restaurante con NUEVA ARQUITECTURA...');
+          console.log('🔍 AuthService: Buscando datos del restaurante...');
           
-          const app = getApp();
-          const db = getFirestore(app);
           let restauranteEncontrado = false;
           
-          // ARQUITECTURA CORRECTA: Buscar admin en /adminUsers/ y luego restaurante por nombre
+          // Buscar en estructura de Formularios usando AngularFirestore
           try {
-            console.log(`📍 ARQUITECTURA CORRECTA - Consultando admin: /adminUsers/${this.currentUser?.uid}`);
-            const adminRef = doc(db, 'adminUsers', this.currentUser!.uid);
-            const adminSnap = await getDoc(adminRef);
+            console.log('🔄 AuthService: Consultando estructura /clients/worldfood/Formularios/');
             
-            if (adminSnap.exists()) {
-              const adminData = adminSnap.data();
-              const nombreRestaurante = adminData['restauranteAsignado'];
-              console.log(`✅ Admin encontrado, restaurante asignado: ${nombreRestaurante}`);
-              
-              // Buscar datos del restaurante por nombre
-              const restauranteInfoRef = doc(db, `clients/${nombreRestaurante}/info`, 'restaurante');
-              const infoSnap = await getDoc(restauranteInfoRef);
-              
-              if (infoSnap.exists()) {
-                const data = infoSnap.data();
-                this.currentRestaurant = { 
-                  id: adminData['restauranteId'] || restaurantePrincipalId, 
-                  nombre: nombreRestaurante,
-                  ...data 
-                };
-                
-                console.log('✅ AuthService: Restaurante encontrado en ARQUITECTURA CORRECTA:', this.currentRestaurant.nombre);
-                restauranteEncontrado = true;
-              }
-            } else {
-              console.log('⚠️ ARQUITECTURA CORRECTA - Admin no encontrado, probando estructura antigua...');
-            }
-          } catch (error) {
-            console.log('⚠️ Error consultando arquitectura correcta, probando estructura antigua:', error);
-          }
-          
-          // COMPATIBILIDAD: Si no se encuentra en nueva arquitectura, buscar en estructura antigua
-          if (!restauranteEncontrado) {
-            console.log('🔄 COMPATIBILIDAD - Consultando estructura antigua: /clients/worldfood/Formularios/');
+            const snapshot = await this.firestore.collection('clients/worldfood/Formularios', ref => 
+              ref.where('typeForm', '==', 'restaurante')
+                 .where('restauranteId', '==', restaurantePrincipalId)
+            ).get().toPromise();
             
-            const formulariosRef = collection(db, 'clients/worldfood/Formularios');
-            const restauranteQuery = query(formulariosRef, 
-              where('typeForm', '==', 'restaurante'),
-              where('restauranteId', '==', restaurantePrincipalId)
-            );
-            const snapshot = await getDocs(restauranteQuery);
-            
-            if (!snapshot.empty) {
+            if (snapshot && !snapshot.empty) {
               const docRestaurante = snapshot.docs[0];
-              const data = docRestaurante.data();
+              const data = docRestaurante.data() as any;
               this.currentRestaurant = { id: data['restauranteId'] || docRestaurante.id, ...data };
               
-              console.log('✅ AuthService: Restaurante encontrado en COMPATIBILIDAD:', this.currentRestaurant.nombre);
+              console.log('✅ AuthService: Restaurante encontrado:', this.currentRestaurant.nombre);
               restauranteEncontrado = true;
             } else {
-              console.log('❌ AuthService: Documento de restaurante no encontrado en ninguna estructura');
+              console.log('❌ AuthService: Documento de restaurante no encontrado');
             }
+          } catch (error) {
+            console.log('⚠️ Error consultando restaurante:', error);
           }
           
           if (restauranteEncontrado) {
@@ -276,19 +239,17 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  // Cargar datos completos del usuario usando Firebase SDK nativo
+  // Cargar datos completos del usuario usando AngularFirestore
   private async cargarDatosUsuario(uid: string): Promise<void> {
     try {
       console.log('📋 AuthService: Obteniendo documento de usuario para UID:', uid);
       
-      // Usar Firebase SDK nativo para evitar problemas de contexto de inyección
-      const app = getApp();
-      const db = getFirestore(app);
-      const userDocRef = doc(db, 'usuarios', uid);
-      const userDoc = await getDoc(userDocRef);
+      // CORREGIDO: Usar AngularFirestore en lugar de Firebase SDK nativo
+      const userDocRef = this.firestore.doc(`adminUsers/${uid}`);
+      const userDoc = await userDocRef.get().toPromise();
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+      if (userDoc && userDoc.exists) {
+        const userData = userDoc.data() as any;
         console.log('✅ AuthService: Documento de usuario encontrado:', userData);
         
         // Convertir Timestamps de Firestore a Date si existen
@@ -299,12 +260,23 @@ export class AuthService {
           userData['ultimoAcceso'] = userData['ultimoAcceso'].toDate();
         }
         
-        this.currentUser = { id: userDoc.id, ...userData } as UsuarioGlobal;
-        console.log('✅ AuthService: currentUser asignado:', this.currentUser);
+        // Convertir estructura de adminUsers a formato esperado por UsuarioGlobal
+        this.currentUser = { 
+          id: userDoc.id,
+          uid: userData['uid'] || userDoc.id,
+          email: userData['email'],
+          nombre: userData['nombre'],
+          rol: userData['rol'] || 'admin',
+          activo: userData['activo'] !== undefined ? userData['activo'] : true,
+          restaurantePrincipal: userData['restauranteId'], // Mapear restauranteId -> restaurantePrincipal
+          fechaCreacion: userData['fechaCreacion'] || new Date(),
+          fechaActualizacion: userData['fechaActualizacion'] || new Date()
+        } as UsuarioGlobal;
+        console.log('✅ AuthService: currentUser asignado desde adminUsers:', this.currentUser);
         
-        // Actualizar última fecha de acceso
+        // Actualizar última fecha de acceso usando AngularFirestore
         console.log('🔄 AuthService: Actualizando último acceso...');
-        await updateDoc(userDocRef, {
+        await userDocRef.update({
           ultimoAcceso: new Date()
         });
         console.log('✅ AuthService: Último acceso actualizado');
